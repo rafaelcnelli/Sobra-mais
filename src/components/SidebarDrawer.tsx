@@ -18,6 +18,7 @@ import {
 import type { User } from 'firebase/auth';
 import { AVAILABLE_MONTHS } from '../utils/seedData';
 import { formatBrlCents } from '../utils/financeLogic';
+import { PWAInstallButton } from './PWAInstallButton';
 
 export type ActiveTab = 'overview' | 'quick_launch' | 'transactions' | 'categories' | 'analysis';
 export type ThemeMode = 'light' | 'dark';
@@ -88,14 +89,16 @@ export function SidebarDrawer({
       {/* Slide-in Lateral Panel */}
       <aside className="relative w-full max-w-md bg-white dark:bg-[#111624] border-l border-slate-200/80 dark:border-[#1E273C] text-[#0A0E17] dark:text-white shadow-2xl flex flex-col justify-between h-full z-10 overflow-hidden animate-in slide-in-from-right duration-200">
         {/* Drawer Header */}
-        <div className="shrink-0 px-6 py-5 border-b border-slate-200 dark:border-[#1E273C] flex items-center justify-between gap-4 bg-white dark:bg-[#111624]">
+        <div className="shrink-0 px-6 py-4 border-b border-slate-200 dark:border-[#1E273C] flex items-center justify-between gap-4 bg-white dark:bg-[#111624]">
           <div className="flex items-center gap-3">
-            <span className="w-10 h-10 rounded-full bg-[#1456FF] text-[#E2FF1A] flex items-center justify-center shrink-0">
-              <SlidersHorizontal className="w-5 h-5" />
-            </span>
+            <img
+              src="./logo-icon.png"
+              alt="SobraMais"
+              className="w-10 h-10 rounded-2xl border border-slate-200 dark:border-[#242F48] object-contain bg-[#F6F8FC] shrink-0"
+            />
             <div>
               <h2 className="text-base font-extrabold font-display text-[#0A0E17] dark:text-white">
-                Aba Lateral
+                SobraMais · Menu
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Páginas extras, tetos, metas e ajustes
@@ -294,11 +297,13 @@ export function SidebarDrawer({
             </div>
           </div>
 
-          {/* Section 4: Preferências & Nuvem */}
+          {/* Section 4: Preferências, App PWA & Nuvem */}
           <div className="space-y-3">
             <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-              Preferências & Nuvem
+              Aplicativo, Preferências & Nuvem
             </div>
+
+            <PWAInstallButton variant="drawer" />
 
             {/* Theme Toggle */}
             <button

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { type ActiveTab, type ThemeMode } from '../App';
 import { formatBrlCents } from '../utils/financeLogic';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface DesktopSidebarProps {
   activeTab: ActiveTab;
@@ -106,20 +107,18 @@ export function DesktopSidebar({
       className="hidden md:flex flex-col w-56 lg:w-64 h-screen shrink-0 bg-white dark:bg-[#111624] border-r border-slate-200/80 dark:border-[#1E273C] transition-colors z-20"
     >
       {/* 1. Header & Brand logo */}
-      <div className="px-3.5 py-3 border-b border-slate-100 dark:border-[#1A2234] flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-[#1456FF] text-[#E2FF1A] flex items-center justify-center font-black text-xs shadow-sm font-display shrink-0">
-            S+
-          </div>
-          <div>
-            <span className="text-base font-black tracking-tight text-[#1456FF] dark:text-white font-display block leading-none">
-              SobraMais
-            </span>
-            <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 block mt-0.5">
-              Controle de Sobras
-            </span>
-          </div>
-        </div>
+      <div className="px-3.5 py-2.5 border-b border-slate-100 dark:border-[#1A2234] flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => onSelectTab('overview')}
+          className="flex items-center gap-2 text-left cursor-pointer"
+        >
+          <img
+            src="./logo-sobramais.png"
+            alt="SobraMais — Controle de Sobras"
+            className="h-9 w-auto object-contain rounded-lg bg-[#F6F8FC] px-1.5 py-0.5"
+          />
+        </button>
       </div>
 
       {/* 2. Primary CTA Button: Novo Lançamento */}
@@ -290,8 +289,10 @@ export function DesktopSidebar({
         </div>
       </div>
 
-      {/* 5. Footer: Preferences & Profile */}
-      <div className="p-3 border-t border-slate-100 dark:border-[#1A2234] bg-slate-50/50 dark:bg-[#0E131F]/50 space-y-2">
+      {/* 5. Footer: Preferences, PWA Install & Profile */}
+      <div className="p-3 border-t border-slate-100 dark:border-[#1A2234] bg-slate-50/50 dark:bg-[#0E131F]/50 space-y-1.5">
+        <PWAInstallButton variant="sidebar" />
+
         {/* Theme Mode Button */}
         <button
           type="button"

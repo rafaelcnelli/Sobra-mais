@@ -74,6 +74,7 @@ import { SidebarDrawer } from './components/SidebarDrawer';
 import { DesktopSidebar } from './components/DesktopSidebar';
 import { PageFilterBar } from './components/PageFilterBar';
 import { AuthPage } from './components/AuthPage';
+import { PWAInstallButton, OfflineIndicator } from './components/PWAInstallButton';
 
 export type ActiveTab = 'overview' | 'quick_launch' | 'transactions' | 'categories' | 'analysis';
 export type ThemeMode = 'light' | 'dark';
@@ -613,9 +614,11 @@ export default function App() {
   if (!isAuthReady) {
     return (
       <div className="h-screen w-full bg-[#F4F6FB] dark:bg-[#080B12] flex flex-col items-center justify-center gap-4 transition-colors">
-        <div className="w-12 h-12 rounded-2xl bg-[#1456FF] text-[#E2FF1A] flex items-center justify-center font-black text-xl shadow-lg font-display animate-pulse">
-          S+
-        </div>
+        <img
+          src="./logo-sobramais.png"
+          alt="SobraMais"
+          className="h-14 w-auto object-contain rounded-2xl bg-[#F6F8FC] px-3 py-1.5 shadow-lg animate-pulse"
+        />
         <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
           <div className="w-3.5 h-3.5 border-2 border-[#1456FF] border-t-transparent rounded-full animate-spin" />
           <span>Iniciando SobraMais...</span>
@@ -666,7 +669,7 @@ export default function App() {
           {/* Top Navbar Header */}
           <header className="shrink-0 bg-white dark:bg-[#111624] border-b border-slate-200/80 dark:border-[#1E273C] px-4 sm:px-6 py-2.5 z-30 transition-colors">
             <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
-              {/* Zone 1: Brand Wordmark (Mobile) / Active Page Indicator (Desktop) */}
+              {/* Zone 1: Brand Logo (Mobile) / Active Page Indicator (Desktop) */}
               <div className="flex items-center gap-2 shrink-0">
                 <a
                   href="#visao-geral"
@@ -674,12 +677,21 @@ export default function App() {
                     e.preventDefault();
                     setActiveTab('overview');
                   }}
-                  className="md:hidden text-lg sm:text-xl font-extrabold tracking-tight text-[#1456FF] dark:text-white font-display whitespace-nowrap"
+                  className="md:hidden flex items-center gap-1.5 shrink-0"
                 >
-                  SobraMais
+                  <img
+                    src="./logo-sobramais.png"
+                    alt="SobraMais"
+                    className="h-7 w-auto object-contain rounded-lg bg-[#F6F8FC] px-1 py-0.5"
+                  />
                 </a>
 
                 <div className="hidden md:flex items-center gap-2">
+                  <img
+                    src="./logo-icon.png"
+                    alt="S+"
+                    className="w-6 h-6 rounded-lg object-contain bg-[#F6F8FC] border border-slate-200/70 dark:border-[#242F48] shrink-0"
+                  />
                   <span className="text-sm font-extrabold text-[#0A0E17] dark:text-white font-display whitespace-nowrap">
                     {activeTab === 'overview' && 'Visão Geral'}
                     {activeTab === 'quick_launch' && 'Gastos Padrões (1-Clique)'}
@@ -812,8 +824,10 @@ export default function App() {
                 )}
               </div>
 
-              {/* Zone 3: Theme Toggle, User Profile & New Launch CTA */}
-              <div className="flex items-center gap-2 shrink-0">
+              {/* Zone 3: PWA Install, Theme Toggle, User Profile & New Launch CTA */}
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                <PWAInstallButton variant="navbar" />
+
                 <button
                   type="button"
                   onClick={toggleTheme}
@@ -889,6 +903,9 @@ export default function App() {
               </div>
             )}
           </header>
+
+          {/* Offline Connectivity Indicator */}
+          <OfflineIndicator />
 
           {/* Floating Non-Displacing Toast Feedback Banner */}
           {toastMessage && (

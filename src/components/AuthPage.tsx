@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { auth, googleProvider } from '../firebase';
 import type { ThemeMode } from '../App';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface AuthPageProps {
   onEnterGuestMode: (customProfile?: { name: string; email: string }) => void;
@@ -258,38 +259,40 @@ export function AuthPage({
 
   return (
     <div className="min-h-screen w-full bg-[#F4F6FB] dark:bg-[#080B12] text-[#0A0E17] dark:text-white flex flex-col justify-between transition-colors duration-200">
-      {/* Top Bar: Brand & Theme Toggle */}
+      {/* Top Bar: Brand, PWA Install & Theme Toggle */}
       <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <span className="w-9 h-9 rounded-2xl bg-[#1456FF] text-[#E2FF1A] flex items-center justify-center font-black text-sm shadow-xs font-display">
-            S+
-          </span>
-          <span className="text-xl font-extrabold tracking-tight text-[#1456FF] dark:text-white font-display">
-            SobraMais
-          </span>
-          <span className="hidden sm:inline text-xs font-medium text-slate-400 dark:text-slate-500">
+        <div className="flex items-center gap-3">
+          <img
+            src="./logo-sobramais.png"
+            alt="SobraMais"
+            className="h-10 sm:h-11 w-auto object-contain rounded-xl bg-[#F6F8FC] px-2 py-1 shadow-xs border border-slate-200/70"
+          />
+          <span className="hidden md:inline text-xs font-medium text-slate-400 dark:text-slate-500">
             · Controle Financeiro & Gestão de Sobras
           </span>
         </div>
 
-        <button
-          type="button"
-          onClick={onToggleTheme}
-          aria-label={theme === 'dark' ? 'Ativar Modo Claro' : 'Ativar Modo Escuro'}
-          className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-full border border-slate-200 dark:border-[#242F48] bg-white dark:bg-[#111624] text-[#0A0E17] dark:text-white hover:border-[#1456FF] dark:hover:border-[#E2FF1A] transition-colors shadow-xs"
-        >
-          {theme === 'dark' ? (
-            <>
-              <Sun className="w-4 h-4 text-[#E2FF1A]" />
-              <span className="hidden sm:inline">Modo Claro</span>
-            </>
-          ) : (
-            <>
-              <Moon className="w-4 h-4 text-[#1456FF]" />
-              <span className="hidden sm:inline">Modo Escuro</span>
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          <PWAInstallButton variant="auth" />
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            aria-label={theme === 'dark' ? 'Ativar Modo Claro' : 'Ativar Modo Escuro'}
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-full border border-slate-200 dark:border-[#242F48] bg-white dark:bg-[#111624] text-[#0A0E17] dark:text-white hover:border-[#1456FF] dark:hover:border-[#E2FF1A] transition-colors shadow-xs"
+          >
+            {theme === 'dark' ? (
+              <>
+                <Sun className="w-4 h-4 text-[#E2FF1A]" />
+                <span className="hidden sm:inline">Modo Claro</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-4 h-4 text-[#1456FF]" />
+                <span className="hidden sm:inline">Modo Escuro</span>
+              </>
+            )}
+          </button>
+        </div>
       </header>
 
       {/* Main Container: Two Columns on Large Screens */}
