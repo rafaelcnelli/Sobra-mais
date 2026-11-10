@@ -35,6 +35,8 @@ import {
   SlidersHorizontal,
   PiggyBank,
   Menu,
+  Search,
+  X,
 } from 'lucide-react';
 import {
   auth,
@@ -48,6 +50,7 @@ import {
   calculateMonthlySummary,
   calculateDynamicSummary,
   filterTransactionsByCriteria,
+  searchTransactionsAcrossDataset,
   DEFAULT_FILTER_CRITERIA,
   type FinancialCategory,
   type FinancialTransaction,
@@ -105,6 +108,15 @@ export default function App() {
       monthKey,
       startDate: '',
       endDate: '',
+    }));
+  }, []);
+
+  const [isNavbarSearchFocused, setIsNavbarSearchFocused] = useState(false);
+
+  const handleNavbarSearchChange = useCallback((value: string) => {
+    setFilterCriteria((prev) => ({
+      ...prev,
+      searchQuery: value,
     }));
   }, []);
   const [theme, setTheme] = useState<ThemeMode>(() => {
@@ -563,7 +575,20 @@ export default function App() {
     return filterTransactionsByCriteria(transactions, filterCriteria);
   }, [transactions, filterCriteria]);
 
+  const navbarSearchQuery = filterCriteria.searchQuery ?? '';
+  const hasActiveNavbarSearch = navbarSearchQuery.trim().length > 0;
+
+  const globalDatasetSearchResults = useMemo(() => {
+    if (!hasActiveNavbarSearch) return [];
+    return searchTransactionsAcrossDataset(transactions, navbarSearchQuery).sort((a, b) =>
+      b.dateIso.localeCompare(a.dateIso)
+    );
+  }, [transactions, navbarSearchQuery, hasActiveNavbarSearch]);
+
   const activePeriodLabel = useMemo(() => {
+    if (hasActiveNavbarSearch) {
+      return `Busca Global: "${navbarSearchQuery.trim()}" (${filteredTransactions.length} de ${transactions.length})`;
+    }
     if (filterCriteria.periodMode === 'range' && filterCriteria.startDate && filterCriteria.endDate) {
       const [sy, sm, sd] = filterCriteria.startDate.split('-');
       const [ey, em, ed] = filterCriteria.endDate.split('-');
@@ -575,7 +600,7 @@ export default function App() {
       return m ? m.label : filterCriteria.monthKey;
     }
     return 'Filtro Personalizado';
-  }, [filterCriteria]);
+  }, [filterCriteria, hasActiveNavbarSearch, navbarSearchQuery, filteredTransactions.length, transactions.length]);
 
   const activePlan =
     monthlyPlans[activeMonth] ?? getDefaultMonthlyPlan(currentUser?.uid ?? 'demo_user', activeMonth);
@@ -640,7 +665,7 @@ export default function App() {
         <div className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden">
           {/* Top Navbar Header */}
           <header className="shrink-0 bg-white dark:bg-[#111624] border-b border-slate-200/80 dark:border-[#1E273C] px-4 sm:px-6 py-2.5 z-30 transition-colors">
-            <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
               {/* Zone 1: Brand Wordmark (Mobile) / Active Page Indicator (Desktop) */}
               <div className="flex items-center gap-2 shrink-0">
                 <a
@@ -653,25 +678,141 @@ export default function App() {
                 >
                   SobraMais
                 </a>
-                <span className="md:hidden text-xs font-medium text-slate-400 dark:text-slate-500">
-                  · Controle de Sobras
-                </span>
 
                 <div className="hidden md:flex items-center gap-2">
-                  <span className="text-sm font-extrabold text-[#0A0E17] dark:text-white font-display">
+                  <span className="text-sm font-extrabold text-[#0A0E17] dark:text-white font-display whitespace-nowrap">
                     {activeTab === 'overview' && 'Visão Geral'}
                     {activeTab === 'quick_launch' && 'Gastos Padrões (1-Clique)'}
                     {activeTab === 'transactions' && 'Entradas e Saídas'}
                     {activeTab === 'categories' && 'Tipos de Gastos & Tetos'}
                     {activeTab === 'analysis' && 'Análise Mensal & Sobras'}
                   </span>
-                  <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
+                  <span className="hidden xl:inline text-xs font-medium text-slate-400 dark:text-slate-500 truncate max-w-[220px]">
                     — {activePeriodLabel}
                   </span>
                 </div>
               </div>
 
-              {/* Zone 2: Theme Toggle, User Profile & New Launch CTA */}
+              {/* Zone 2: Real-Time Global Search Bar Across Entire Loaded Dataset */}
+              <div className="relative flex-1 max-w-md mx-1 sm:mx-2">
+                <div className="relative flex items-center">
+                  <Search className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 absolute left-3 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={navbarSearchQuery}
+                    onFocus={() => setIsNavbarSearchFocused(true)}
+                    onBlur={() => {
+                      window.setTimeout(() => setIsNavbarSearchFocused(false), 180);
+                    }}
+                    onChange={(e) => handleNavbarSearchChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        handleNavbarSearchChange('');
+                      } else if (e.key === 'Enter' && hasActiveNavbarSearch) {
+                        setIsNavbarSearchFocused(false);
+                        setActiveTab('transactions');
+                      }
+                    }}
+                    placeholder="Buscar transação em todo o histórico..."
+                    aria-label="Buscar transações por descrição em tempo real"
+                    className={`w-full pl-8 ${
+                      hasActiveNavbarSearch ? 'pr-20' : 'pr-3'
+                    } py-1.5 text-xs bg-[#F4F6FB] dark:bg-[#192034] border ${
+                      hasActiveNavbarSearch
+                        ? 'border-[#1456FF] dark:border-[#E2FF1A] ring-1 ring-[#1456FF]/20 dark:ring-[#E2FF1A]/20'
+                        : 'border-slate-200 dark:border-[#242F48]'
+                    } rounded-full text-[#0A0E17] dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#1456FF] dark:focus:border-[#E2FF1A] transition-colors`}
+                  />
+
+                  {hasActiveNavbarSearch && (
+                    <div className="absolute right-1.5 flex items-center gap-1">
+                      <span
+                        title={`${filteredTransactions.length} transações encontradas em todo o conjunto de dados`}
+                        className="px-1.5 py-0.5 text-[10px] font-mono tabular-nums font-extrabold rounded-full bg-[#1456FF] text-[#E2FF1A]"
+                      >
+                        {filteredTransactions.length}/{transactions.length}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleNavbarSearchChange('')}
+                        aria-label="Limpar busca"
+                        className="p-0.5 rounded-full text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Instant Real-Time Search Results Dropdown across the entire loaded dataset */}
+                {isNavbarSearchFocused && hasActiveNavbarSearch && (
+                  <div
+                    role="region"
+                    aria-label="Resultados da busca em tempo real"
+                    className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#111624] border border-slate-200 dark:border-[#242F48] rounded-2xl shadow-xl overflow-hidden z-50"
+                  >
+                    <div className="px-3 py-2 bg-[#F4F6FB] dark:bg-[#161D2F] border-b border-slate-200/80 dark:border-[#242F48] flex items-center justify-between gap-2 text-[11px]">
+                      <span className="font-bold text-slate-600 dark:text-slate-300 truncate">
+                        Todo o Conjunto ({globalDatasetSearchResults.length} de {transactions.length})
+                      </span>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setActiveTab('transactions');
+                          setIsNavbarSearchFocused(false);
+                        }}
+                        className="font-extrabold text-[#1456FF] dark:text-[#E2FF1A] hover:underline whitespace-nowrap"
+                      >
+                        Ver na tabela →
+                      </button>
+                    </div>
+
+                    {globalDatasetSearchResults.length === 0 ? (
+                      <div className="p-3.5 text-center text-xs text-slate-500 dark:text-slate-400">
+                        Nenhuma transação encontrada para <strong>"{navbarSearchQuery}"</strong> em todo o conjunto de dados carregado.
+                      </div>
+                    ) : (
+                      <div className="max-h-60 overflow-y-auto divide-y divide-slate-100 dark:divide-[#1E273C]">
+                        {globalDatasetSearchResults.slice(0, 6).map((tx) => (
+                          <button
+                            key={tx.id}
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              setActiveTab('transactions');
+                              setIsNavbarSearchFocused(false);
+                            }}
+                            className="w-full px-3 py-2 text-left hover:bg-[#F4F6FB] dark:hover:bg-[#192034] flex items-center justify-between gap-2 transition-colors"
+                          >
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-[#0A0E17] dark:text-white truncate">
+                                {tx.description}
+                              </div>
+                              <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                                {tx.dateIso.split('-').reverse().join('/')} · {tx.categoryName}
+                              </div>
+                            </div>
+                            <span
+                              className={`text-xs font-mono tabular-nums font-extrabold whitespace-nowrap shrink-0 ${
+                                tx.type === 'income'
+                                  ? 'text-emerald-600 dark:text-[#E2FF1A]'
+                                  : 'text-[#0A0E17] dark:text-white'
+                              }`}
+                            >
+                              {tx.type === 'income'
+                                ? `+ ${formatBrlCents(tx.amountCents)}`
+                                : `- ${formatBrlCents(tx.amountCents)}`}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Zone 3: Theme Toggle, User Profile & New Launch CTA */}
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
@@ -682,12 +823,12 @@ export default function App() {
                   {theme === 'dark' ? (
                     <>
                       <Sun className="w-3.5 h-3.5 text-[#E2FF1A]" />
-                      <span className="hidden md:inline">Modo Claro</span>
+                      <span className="hidden lg:inline">Modo Claro</span>
                     </>
                   ) : (
                     <>
                       <Moon className="w-3.5 h-3.5 text-[#1456FF]" />
-                      <span className="hidden md:inline">Modo Escuro</span>
+                      <span className="hidden lg:inline">Modo Escuro</span>
                     </>
                   )}
                 </button>
@@ -696,7 +837,7 @@ export default function App() {
                   <div className="flex items-center gap-2">
                     <div
                       title={currentUser.displayName || currentUser.email || ''}
-                      className="hidden md:flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-[#F4F6FB] dark:bg-[#192034] rounded-full border border-slate-200 dark:border-[#242F48] max-w-[170px]"
+                      className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-[#F4F6FB] dark:bg-[#192034] rounded-full border border-slate-200 dark:border-[#242F48] max-w-[150px]"
                     >
                       <span className="w-5 h-5 rounded-full bg-[#1456FF] text-[#E2FF1A] flex items-center justify-center text-[10px] font-black shrink-0 uppercase">
                         {(currentUser.displayName?.[0] || currentUser.email?.[0] || 'U')}
@@ -721,8 +862,8 @@ export default function App() {
                     className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-[#F4F6FB] dark:bg-[#192034] border border-slate-200 dark:border-[#242F48] rounded-full hover:border-[#1456FF] transition-colors whitespace-nowrap"
                   >
                     <LogOut className="w-3.5 h-3.5 text-[#1456FF] dark:text-[#E2FF1A]" />
-                    <span className="hidden sm:inline">Convidado · Sair</span>
-                    <span className="sm:hidden">Sair</span>
+                    <span className="hidden lg:inline">Convidado · Sair</span>
+                    <span className="lg:hidden">Sair</span>
                   </button>
                 )}
 
@@ -841,6 +982,8 @@ export default function App() {
                 onDeleteTransaction={handleDeleteTransaction}
                 filteredTransactions={filteredTransactions}
                 periodLabel={activePeriodLabel}
+                globalSearchQuery={navbarSearchQuery}
+                onChangeGlobalSearchQuery={handleNavbarSearchChange}
               />
             )}
 

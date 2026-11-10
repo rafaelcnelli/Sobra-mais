@@ -233,6 +233,36 @@ test('filterTransactionsByCriteria filters by custom date range, category, natur
   assert.equal(cmp.netBalanceCents, 285000);
   assert.equal(cmp.retentionRatePercent, 57);
   assert.equal(cmp.largestExpense?.description, 'Aluguel');
+
+  // Cross-dataset real-time search by description across different months
+  const multiMonthTxs: FinancialTransaction[] = [
+    ...sampleTxs,
+    {
+      id: 'tx4',
+      uid: 'u1',
+      description: 'Salário Outubro',
+      amountCents: 480000,
+      type: 'income',
+      categoryId: 'cat_salary',
+      categoryName: 'Salário',
+      expenseNature: 'income_recurring',
+      dateIso: '2026-10-05',
+      monthKey: '2026-10',
+      isStandardTemplate: true,
+      notes: '',
+    },
+  ];
+
+  const globalSearchMatches = filterTransactionsByCriteria(multiMonthTxs, {
+    periodMode: 'month',
+    monthKey: '2026-11',
+    direction: 'all',
+    nature: 'all',
+    categoryId: 'all',
+    searchQuery: 'salario', // accent-insensitive match across 2026-10 and 2026-11
+  });
+  assert.equal(globalSearchMatches.length, 2);
 });
+
 
 

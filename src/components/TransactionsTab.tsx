@@ -28,6 +28,8 @@ interface TransactionsTabProps {
   onDeleteTransaction: (id: string) => Promise<void>;
   filteredTransactions?: FinancialTransaction[];
   periodLabel?: string;
+  globalSearchQuery?: string;
+  onChangeGlobalSearchQuery?: (query: string) => void;
 }
 
 const PAGE_SIZE = 6;
@@ -41,12 +43,23 @@ export function TransactionsTab({
   onDeleteTransaction,
   filteredTransactions,
   periodLabel,
+  globalSearchQuery,
+  onChangeGlobalSearchQuery,
 }: TransactionsTabProps) {
   const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [natureFilter, setNatureFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [localSearchQuery, setLocalSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+
+  const searchQuery = globalSearchQuery !== undefined ? globalSearchQuery : localSearchQuery;
+  const setSearchQuery = (val: string) => {
+    if (onChangeGlobalSearchQuery) {
+      onChangeGlobalSearchQuery(val);
+    } else {
+      setLocalSearchQuery(val);
+    }
+  };
 
   const baseTransactions = filteredTransactions ?? transactions.filter((t) => t.monthKey === activeMonth);
 
@@ -65,11 +78,20 @@ export function TransactionsTab({
       .filter((t) => (categoryFilter === 'all' ? true : t.categoryId === categoryFilter))
       .filter((t) => {
         if (!searchQuery.trim()) return true;
-        const q = searchQuery.toLowerCase();
+        const q = searchQuery
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .trim();
+        const norm = (s: string) =>
+          s
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase();
         return (
-          t.description.toLowerCase().includes(q) ||
-          t.categoryName.toLowerCase().includes(q) ||
-          t.notes.toLowerCase().includes(q)
+          norm(t.description).includes(q) ||
+          norm(t.categoryName).includes(q) ||
+          norm(t.notes).includes(q)
         );
       })
       .sort((a, b) => b.dateIso.localeCompare(a.dateIso));

@@ -296,17 +296,58 @@ export const DEFAULT_FILTER_CRITERIA: CustomFilterCriteria = {
 };
 
 /**
+ * Normalizes text for accent-insensitive real-time search (e.g. "salario" matches "Salário").
+ */
+export function normalizeSearchText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * Filters transactions across the entire loaded dataset by description, category, or notes in real time.
+ */
+export function searchTransactionsAcrossDataset(
+  transactions: FinancialTransaction[],
+  rawQuery: string
+): FinancialTransaction[] {
+  const q = normalizeSearchText(rawQuery);
+  if (!q) return transactions;
+  return transactions.filter((t) => {
+    const descMatch = normalizeSearchText(t.description).includes(q);
+    const catMatch = normalizeSearchText(t.categoryName).includes(q);
+    const notesMatch = t.notes ? normalizeSearchText(t.notes).includes(q) : false;
+    return descMatch || catMatch || notesMatch;
+  });
+}
+
+/**
  * Filters transactions based on standard months or custom period, direction, nature, category, value range, and search.
+ * When `searchQuery` is provided, it searches across the entire loaded dataset (all months) unless a custom date range is explicitly set.
  */
 export function filterTransactionsByCriteria(
   transactions: FinancialTransaction[],
   criteria: CustomFilterCriteria
 ): FinancialTransaction[] {
+  const normalizedQuery = criteria.searchQuery ? normalizeSearchText(criteria.searchQuery) : '';
+  const hasSearchQuery = normalizedQuery.length > 0;
+
   return transactions.filter((t) => {
-    // 1. Period filter
-    if (criteria.periodMode === 'month') {
-      if (criteria.monthKey !== 'all' && t.monthKey !== criteria.monthKey) {
-        return false;
+    // 1. Period filter: when searching in real time, search across all loaded months unless an explicit date range was set
+    if (!hasSearchQuery) {
+      if (criteria.periodMode === 'month') {
+        if (criteria.monthKey !== 'all' && t.monthKey !== criteria.monthKey) {
+          return false;
+        }
+      } else if (criteria.periodMode === 'range') {
+        if (criteria.startDate && t.dateIso < criteria.startDate) {
+          return false;
+        }
+        if (criteria.endDate && t.dateIso > criteria.endDate) {
+          return false;
+        }
       }
     } else if (criteria.periodMode === 'range') {
       if (criteria.startDate && t.dateIso < criteria.startDate) {
@@ -342,13 +383,12 @@ export function filterTransactionsByCriteria(
       if (t.amountCents > criteria.maxAmountCents) return false;
     }
 
-    // 7. Search query filter
-    if (criteria.searchQuery && criteria.searchQuery.trim().length > 0) {
-      const q = criteria.searchQuery.toLowerCase().trim();
+    // 7. Real-time search query filter (accent-insensitive across description, category, and notes)
+    if (hasSearchQuery) {
       const match =
-        t.description.toLowerCase().includes(q) ||
-        t.categoryName.toLowerCase().includes(q) ||
-        (t.notes && t.notes.toLowerCase().includes(q));
+        normalizeSearchText(t.description).includes(normalizedQuery) ||
+        normalizeSearchText(t.categoryName).includes(normalizedQuery) ||
+        (t.notes && normalizeSearchText(t.notes).includes(normalizedQuery));
       if (!match) return false;
     }
 

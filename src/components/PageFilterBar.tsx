@@ -52,6 +52,10 @@ export function PageFilterBar({
   );
   const [localSearch, setLocalSearch] = useState<string>(criteria.searchQuery ?? '');
 
+  React.useEffect(() => {
+    setLocalSearch(criteria.searchQuery ?? '');
+  }, [criteria.searchQuery]);
+
   // Calculate active custom filters count (ignoring base month)
   const isCustomActive =
     criteria.periodMode === 'range' ||
