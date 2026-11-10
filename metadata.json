@@ -1,0 +1,6 @@
+{
+  "name": "SobraMais — Controle Financeiro e Gestão de Sobras",
+  "description": "Plataforma de gestão de entradas, saídas, gastos padrões, categorias personalizadas e planejamento inteligente de sobras mensais.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,247 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isOwner(userId) {
+      return isVerified() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation Blueprint: Transaction
+    function isValidTransaction(data, userId) {
+      return data.keys().hasAll([
+          'uid',
+          'description',
+          'amountCents',
+          'type',
+          'categoryId',
+          'categoryName',
+          'expenseNature',
+          'dateIso',
+          'monthKey',
+          'isStandardTemplate',
+          'notes',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid',
+          'description',
+          'amountCents',
+          'type',
+          'categoryId',
+          'categoryName',
+          'expenseNature',
+          'dateIso',
+          'monthKey',
+          'isStandardTemplate',
+          'notes',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 &&
+        data.uid == request.auth.uid && data.uid == userId &&
+        data.description is string && data.description.size() >= 1 && data.description.size() <= 120 &&
+        data.amountCents is int && data.amountCents >= 1 && data.amountCents <= 100000000000 &&
+        data.type is string && data.type.size() <= 16 && (data.type == 'income' || data.type == 'expense') &&
+        data.categoryId is string && data.categoryId.size() >= 1 && data.categoryId.size() <= 64 && data.categoryId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.categoryName is string && data.categoryName.size() >= 1 && data.categoryName.size() <= 60 &&
+        data.expenseNature is string && data.expenseNature.size() <= 32 && (
+          data.expenseNature == 'fixed' ||
+          data.expenseNature == 'variable' ||
+          data.expenseNature == 'surplus_allocation' ||
+          data.expenseNature == 'income_recurring' ||
+          data.expenseNature == 'income_extra'
+        ) &&
+        data.dateIso is string && data.dateIso.size() == 10 && data.dateIso.matches('^\\d{4}-\\d{2}-\\d{2}$') &&
+        data.monthKey is string && data.monthKey.size() == 7 && data.monthKey.matches('^\\d{4}-\\d{2}$') &&
+        data.isStandardTemplate is bool &&
+        data.notes is string && data.notes.size() <= 240 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // Validation Blueprint: CustomCategory
+    function isValidCustomCategory(data, userId) {
+      return data.keys().hasAll([
+          'uid',
+          'name',
+          'type',
+          'nature',
+          'monthlyLimitCents',
+          'defaultAmountCents',
+          'isStandardPreset',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid',
+          'name',
+          'type',
+          'nature',
+          'monthlyLimitCents',
+          'defaultAmountCents',
+          'isStandardPreset',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 &&
+        data.uid == request.auth.uid && data.uid == userId &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 60 &&
+        data.type is string && data.type.size() <= 16 && (data.type == 'income' || data.type == 'expense') &&
+        data.nature is string && data.nature.size() <= 32 && (
+          data.nature == 'fixed' ||
+          data.nature == 'variable' ||
+          data.nature == 'surplus_allocation' ||
+          data.nature == 'income_recurring' ||
+          data.nature == 'income_extra'
+        ) &&
+        data.monthlyLimitCents is int && data.monthlyLimitCents >= 0 && data.monthlyLimitCents <= 100000000000 &&
+        data.defaultAmountCents is int && data.defaultAmountCents >= 0 && data.defaultAmountCents <= 100000000000 &&
+        data.isStandardPreset is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // Validation Blueprint: MonthlyPlan
+    function isValidMonthlyPlan(data, userId) {
+      return data.keys().hasAll([
+          'uid',
+          'monthKey',
+          'targetSurplusPercent',
+          'targetSurplusCents',
+          'emergencySharePercent',
+          'investmentsSharePercent',
+          'goalsSharePercent',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid',
+          'monthKey',
+          'targetSurplusPercent',
+          'targetSurplusCents',
+          'emergencySharePercent',
+          'investmentsSharePercent',
+          'goalsSharePercent',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 &&
+        data.uid == request.auth.uid && data.uid == userId &&
+        data.monthKey is string && data.monthKey.size() == 7 && data.monthKey.matches('^\\d{4}-\\d{2}$') &&
+        data.targetSurplusPercent is int && data.targetSurplusPercent >= 0 && data.targetSurplusPercent <= 90 &&
+        data.targetSurplusCents is int && data.targetSurplusCents >= 0 && data.targetSurplusCents <= 100000000000 &&
+        data.emergencySharePercent is int && data.emergencySharePercent >= 0 && data.emergencySharePercent <= 100 &&
+        data.investmentsSharePercent is int && data.investmentsSharePercent >= 0 && data.investmentsSharePercent <= 100 &&
+        data.goalsSharePercent is int && data.goalsSharePercent >= 0 && data.goalsSharePercent <= 100 &&
+        (data.emergencySharePercent + data.investmentsSharePercent + data.goalsSharePercent == 100) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // User Transactions Subcollection
+    match /users/{userId}/transactions/{transactionId} {
+      allow get: if isOwner(userId) && isValidId(userId) && isValidId(transactionId) && existing().uid == request.auth.uid;
+      allow list: if isOwner(userId) && existing().uid == request.auth.uid;
+      allow create: if isOwner(userId) && isValidId(userId) && isValidId(transactionId) &&
+        isValidTransaction(incoming(), userId) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isOwner(userId) && isValidId(userId) && isValidId(transactionId) &&
+        isValidTransaction(incoming(), userId) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'description',
+          'amountCents',
+          'type',
+          'categoryId',
+          'categoryName',
+          'expenseNature',
+          'dateIso',
+          'monthKey',
+          'isStandardTemplate',
+          'notes',
+          'updatedAt'
+        ]);
+      allow delete: if isOwner(userId) && isValidId(userId) && isValidId(transactionId) && existing().uid == request.auth.uid;
+    }
+
+    // User Categories Subcollection
+    match /users/{userId}/categories/{categoryId} {
+      allow get: if isOwner(userId) && isValidId(userId) && isValidId(categoryId) && existing().uid == request.auth.uid;
+      allow list: if isOwner(userId) && existing().uid == request.auth.uid;
+      allow create: if isOwner(userId) && isValidId(userId) && isValidId(categoryId) &&
+        isValidCustomCategory(incoming(), userId) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isOwner(userId) && isValidId(userId) && isValidId(categoryId) &&
+        isValidCustomCategory(incoming(), userId) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name',
+          'type',
+          'nature',
+          'monthlyLimitCents',
+          'defaultAmountCents',
+          'isStandardPreset',
+          'updatedAt'
+        ]);
+      allow delete: if isOwner(userId) && isValidId(userId) && isValidId(categoryId) && existing().uid == request.auth.uid;
+    }
+
+    // User Monthly Plans Subcollection
+    match /users/{userId}/monthlyPlans/{planId} {
+      allow get: if isOwner(userId) && isValidId(userId) && isValidId(planId) && existing().uid == request.auth.uid;
+      allow list: if isOwner(userId) && existing().uid == request.auth.uid;
+      allow create: if isOwner(userId) && isValidId(userId) && isValidId(planId) &&
+        isValidMonthlyPlan(incoming(), userId) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isOwner(userId) && isValidId(userId) && isValidId(planId) &&
+        isValidMonthlyPlan(incoming(), userId) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'monthKey',
+          'targetSurplusPercent',
+          'targetSurplusCents',
+          'emergencySharePercent',
+          'investmentsSharePercent',
+          'goalsSharePercent',
+          'updatedAt'
+        ]);
+      allow delete: if isOwner(userId) && isValidId(userId) && isValidId(planId) && existing().uid == request.auth.uid;
+    }
+  }
+}

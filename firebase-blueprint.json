@@ -1,0 +1,244 @@
+{
+  "entities": {
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Financial transaction representing an income (entrada) or expense (saida) for a specific user and month.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "description": {
+          "type": "string",
+          "description": "Short description of the income or expense.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "amountCents": {
+          "type": "integer",
+          "description": "Positive amount in Brazilian Real cents (centavos)."
+        },
+        "type": {
+          "type": "string",
+          "description": "Transaction direction: income (entrada) or expense (saida).",
+          "enum": ["income", "expense"]
+        },
+        "categoryId": {
+          "type": "string",
+          "description": "Identifier of the standard or custom category.",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "categoryName": {
+          "type": "string",
+          "description": "Display label of the category.",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "expenseNature": {
+          "type": "string",
+          "description": "Classification of the flow: fixed, variable, or surplus_allocation.",
+          "enum": ["fixed", "variable", "surplus_allocation", "income_recurring", "income_extra"]
+        },
+        "dateIso": {
+          "type": "string",
+          "description": "Transaction date in YYYY-MM-DD format.",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "monthKey": {
+          "type": "string",
+          "description": "Month partition key in YYYY-MM format.",
+          "minLength": 7,
+          "maxLength": 7,
+          "pattern": "^\\d{4}-\\d{2}$"
+        },
+        "isStandardTemplate": {
+          "type": "boolean",
+          "description": "Whether this entry originated from a standard recurring template."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes or payment method reference.",
+          "maxLength": 240
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the transaction was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the transaction was last updated."
+        }
+      },
+      "required": [
+        "uid",
+        "description",
+        "amountCents",
+        "type",
+        "categoryId",
+        "categoryName",
+        "expenseNature",
+        "dateIso",
+        "monthKey",
+        "isStandardTemplate",
+        "notes",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CustomCategory": {
+      "title": "CustomCategory",
+      "description": "User-defined or customized expense/income category and standard recurring template.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Category or standard expense name.",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "type": {
+          "type": "string",
+          "description": "Direction: income or expense.",
+          "enum": ["income", "expense"]
+        },
+        "nature": {
+          "type": "string",
+          "description": "Whether the category is fixed, variable, surplus_allocation, income_recurring, or income_extra.",
+          "enum": ["fixed", "variable", "surplus_allocation", "income_recurring", "income_extra"]
+        },
+        "monthlyLimitCents": {
+          "type": "integer",
+          "description": "Monthly spending cap in cents (0 if no cap)."
+        },
+        "defaultAmountCents": {
+          "type": "integer",
+          "description": "Suggested default amount in cents for quick 1-click launch."
+        },
+        "isStandardPreset": {
+          "type": "boolean",
+          "description": "True if configured as a reusable standard expense/income preset."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when last updated."
+        }
+      },
+      "required": [
+        "uid",
+        "name",
+        "type",
+        "nature",
+        "monthlyLimitCents",
+        "defaultAmountCents",
+        "isStandardPreset",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "MonthlyPlan": {
+      "title": "MonthlyPlan",
+      "description": "Monthly financial target and surplus allocation goal for a user.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "monthKey": {
+          "type": "string",
+          "description": "Target month in YYYY-MM format.",
+          "minLength": 7,
+          "maxLength": 7,
+          "pattern": "^\\d{4}-\\d{2}$"
+        },
+        "targetSurplusPercent": {
+          "type": "integer",
+          "description": "Target percentage of income to keep as surplus (0 to 90)."
+        },
+        "targetSurplusCents": {
+          "type": "integer",
+          "description": "Explicit monthly surplus target in cents."
+        },
+        "emergencySharePercent": {
+          "type": "integer",
+          "description": "Percentage of monthly surplus directed to Emergency Reserve."
+        },
+        "investmentsSharePercent": {
+          "type": "integer",
+          "description": "Percentage of monthly surplus directed to Long-Term Investments."
+        },
+        "goalsSharePercent": {
+          "type": "integer",
+          "description": "Percentage of monthly surplus directed to Personal Goals."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when last updated."
+        }
+      },
+      "required": [
+        "uid",
+        "monthKey",
+        "targetSurplusPercent",
+        "targetSurplusCents",
+        "emergencySharePercent",
+        "investmentsSharePercent",
+        "goalsSharePercent",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": {
+        "$ref": "#/entities/Transaction"
+      },
+      "description": "User-scoped financial transactions (entradas and saidas)."
+    },
+    "/users/{userId}/categories/{categoryId}": {
+      "schema": {
+        "$ref": "#/entities/CustomCategory"
+      },
+      "description": "User-scoped custom categories and standard expense templates."
+    },
+    "/users/{userId}/monthlyPlans/{planId}": {
+      "schema": {
+        "$ref": "#/entities/MonthlyPlan"
+      },
+      "description": "User-scoped monthly surplus goals and allocation rules."
+    }
+  }
+}
