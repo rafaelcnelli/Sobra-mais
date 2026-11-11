@@ -68,6 +68,15 @@
           "description": "Optional notes or payment method reference.",
           "maxLength": 240
         },
+        "status": {
+          "type": "string",
+          "description": "Settlement status of the transaction: completed (pago/recebido) or pending (pendente).",
+          "enum": ["completed", "pending"]
+        },
+        "isRecurring": {
+          "type": "boolean",
+          "description": "Whether this transaction repeats monthly as a fixed bill or recurring income."
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time",

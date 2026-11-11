@@ -2,9 +2,8 @@ import React, { useEffect } from 'react';
 import {
   X,
   SlidersHorizontal,
-  PiggyBank,
+  Compass,
   LayoutGrid,
-  Zap,
   ArrowLeftRight,
   Sun,
   Moon,
@@ -12,16 +11,13 @@ import {
   LogOut,
   Calendar,
   Plus,
-  ArrowRight,
   CheckCircle2,
 } from 'lucide-react';
 import type { User } from 'firebase/auth';
 import { AVAILABLE_MONTHS } from '../utils/seedData';
 import { formatBrlCents } from '../utils/financeLogic';
 import { PWAInstallButton } from './PWAInstallButton';
-
-export type ActiveTab = 'overview' | 'quick_launch' | 'transactions' | 'categories' | 'analysis';
-export type ThemeMode = 'light' | 'dark';
+import type { ActiveTab, ThemeMode } from '../App';
 
 interface SidebarDrawerProps {
   isOpen: boolean;
@@ -35,7 +31,7 @@ interface SidebarDrawerProps {
   currentUser: User | null;
   onGoogleSignIn: () => void;
   onSignOut: () => void;
-  onOpenNewModal: (type?: 'income' | 'expense') => void;
+  onOpenNewModal: (type?: 'income' | 'expense', initialTab?: 'quick' | 'detailed') => void;
   categoriesCount: number;
   transactionsCount: number;
   netSurplusCents: number;
@@ -51,14 +47,12 @@ export function SidebarDrawer({
   theme,
   onToggleTheme,
   currentUser,
-  onGoogleSignIn,
   onSignOut,
   onOpenNewModal,
   categoriesCount,
   transactionsCount,
   netSurplusCents,
 }: SidebarDrawerProps) {
-  // Close on Escape key press
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -76,32 +70,34 @@ export function SidebarDrawer({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Aba Lateral com Opções e Páginas do SobraMais"
+      aria-label="Menu Rápido SobraMais"
       className="fixed inset-0 z-50 flex justify-end"
     >
-      {/* Backdrop overlay */}
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Slide-in Lateral Panel */}
-      <aside className="relative w-full max-w-md bg-white dark:bg-[#111624] border-l border-slate-200/80 dark:border-[#1E273C] text-[#0A0E17] dark:text-white shadow-2xl flex flex-col justify-between h-full z-10 overflow-hidden animate-in slide-in-from-right duration-200">
-        {/* Drawer Header */}
+      <aside className="relative w-full max-w-md bg-white dark:bg-[#111624] border-l border-slate-200/80 dark:border-[#1E273C] text-[#000000] dark:text-white shadow-2xl flex flex-col justify-between h-full z-10 overflow-hidden animate-in slide-in-from-right duration-200">
         <div className="shrink-0 px-6 py-4 border-b border-slate-200 dark:border-[#1E273C] flex items-center justify-between gap-4 bg-white dark:bg-[#111624]">
           <div className="flex items-center gap-3">
             <img
               src="./logo-icon.png"
               alt="SobraMais"
-              className="w-10 h-10 rounded-2xl border border-slate-200 dark:border-[#242F48] object-contain bg-[#F6F8FC] shrink-0"
+              className="w-10 h-10 object-contain dark:hidden shrink-0"
+            />
+            <img
+              src="./logo-icon-dark.png"
+              alt="SobraMais"
+              className="w-10 h-10 object-contain hidden dark:block shrink-0"
             />
             <div>
-              <h2 className="text-base font-extrabold font-display text-[#0A0E17] dark:text-white">
-                SobraMais · Menu
+              <h2 className="text-base font-extrabold font-display text-[#000000] dark:text-white">
+                SobraMais · Navegação
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Páginas extras, tetos, metas e ajustes
+                Acesso rápido às 4 páginas e preferências
               </p>
             </div>
           </div>
@@ -109,174 +105,87 @@ export function SidebarDrawer({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Fechar aba lateral"
-            className="p-2 text-slate-400 hover:text-[#0A0E17] dark:hover:text-white rounded-full hover:bg-[#F4F6FB] dark:hover:bg-[#181F32] transition-colors"
+            aria-label="Fechar menu"
+            className="p-2 text-slate-400 hover:text-[#000000] dark:hover:text-white rounded-full hover:bg-[#F8FAFC] dark:hover:bg-[#181F32] transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Drawer Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Section 1: Páginas Principais da Aba Lateral */}
-          <div>
-            <div className="flex items-center justify-between text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
-              <span>Módulos Extras da Aba Lateral</span>
-            </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                onSelectTab('dashboard');
+                onClose();
+              }}
+              className={`p-3 rounded-2xl border text-left transition-colors cursor-pointer ${
+                activeTab === 'dashboard'
+                  ? 'border-[#1860FC] bg-[#1860FC] text-white font-bold'
+                  : 'border-slate-200 dark:border-[#1E273C] bg-[#F8FAFC] dark:bg-[#181F32] text-xs font-semibold hover:border-[#1860FC]'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4 mb-1.5" />
+              <span className="text-xs font-extrabold block truncate">Visão Geral</span>
+            </button>
 
-            <div className="space-y-3">
-              {/* Card 1: Tipos de Gastos */}
-              <button
-                type="button"
-                onClick={() => {
-                  onSelectTab('categories');
-                  onClose();
-                }}
-                className={`w-full group p-4 rounded-3xl border text-left transition-all flex items-start justify-between gap-3 ${
-                  activeTab === 'categories'
-                    ? 'border-[#1456FF] bg-[#1456FF] text-white shadow-md'
-                    : 'border-slate-200/80 dark:border-[#1E273C] bg-[#F4F6FB] dark:bg-[#181F32] hover:border-[#1456FF]'
-                }`}
-              >
-                <div className="flex items-start gap-3.5 min-w-0">
-                  <span
-                    className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-                      activeTab === 'categories'
-                        ? 'bg-[#E2FF1A] text-[#0A0E17]'
-                        : 'bg-[#1456FF] text-white'
-                    }`}
-                  >
-                    <SlidersHorizontal className="w-4 h-4" />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="text-sm font-extrabold font-display truncate">
-                      Tipos de Gastos & Categorias
-                    </div>
-                    <div
-                      className={`text-xs mt-0.5 ${
-                        activeTab === 'categories'
-                          ? 'text-blue-100'
-                          : 'text-slate-500 dark:text-slate-400'
-                      }`}
-                    >
-                      Criar tipos personalizados, definir tetos mensais e valores padrões ({categoriesCount} tipos).
-                    </div>
-                  </div>
-                </div>
-                <ArrowRight
-                  className={`w-4 h-4 shrink-0 mt-2 transition-transform group-hover:translate-x-0.5 ${
-                    activeTab === 'categories' ? 'text-[#E2FF1A]' : 'text-slate-400'
-                  }`}
-                />
-              </button>
+            <button
+              type="button"
+              onClick={() => {
+                onSelectTab('planner');
+                onClose();
+              }}
+              className={`p-3 rounded-2xl border text-left transition-colors cursor-pointer ${
+                activeTab === 'planner'
+                  ? 'border-[#1860FC] bg-[#1860FC] text-white font-bold'
+                  : 'border-slate-200 dark:border-[#1E273C] bg-[#F8FAFC] dark:bg-[#181F32] text-xs font-semibold hover:border-[#1860FC]'
+              }`}
+            >
+              <Compass className="w-4 h-4 mb-1.5" />
+              <span className="text-xs font-extrabold block truncate">Planejador & Metas</span>
+            </button>
 
-              {/* Card 2: Análise & Sobras */}
-              <button
-                type="button"
-                onClick={() => {
-                  onSelectTab('analysis');
-                  onClose();
-                }}
-                className={`w-full group p-4 rounded-3xl border text-left transition-all flex items-start justify-between gap-3 ${
-                  activeTab === 'analysis'
-                    ? 'border-[#1456FF] bg-[#1456FF] text-white shadow-md'
-                    : 'border-slate-200/80 dark:border-[#1E273C] bg-[#F4F6FB] dark:bg-[#181F32] hover:border-[#1456FF]'
-                }`}
-              >
-                <div className="flex items-start gap-3.5 min-w-0">
-                  <span
-                    className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-                      activeTab === 'analysis'
-                        ? 'bg-[#E2FF1A] text-[#0A0E17]'
-                        : 'bg-[#1456FF] text-white'
-                    }`}
-                  >
-                    <PiggyBank className="w-4 h-4" />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="text-sm font-extrabold font-display truncate">
-                      Análise & Planejador de Sobras
-                    </div>
-                    <div
-                      className={`text-xs mt-0.5 ${
-                        activeTab === 'analysis'
-                          ? 'text-blue-100'
-                          : 'text-slate-500 dark:text-slate-400'
-                      }`}
-                    >
-                      Simulador de divisão da sobra (Reserva, Ações, Metas) e projeção de 12 meses.
-                    </div>
-                  </div>
-                </div>
-                <ArrowRight
-                  className={`w-4 h-4 shrink-0 mt-2 transition-transform group-hover:translate-x-0.5 ${
-                    activeTab === 'analysis' ? 'text-[#E2FF1A]' : 'text-slate-400'
-                  }`}
-                />
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                onSelectTab('transactions');
+                onClose();
+              }}
+              className={`p-3 rounded-2xl border text-left transition-colors cursor-pointer ${
+                activeTab === 'transactions'
+                  ? 'border-[#1860FC] bg-[#1860FC] text-white font-bold'
+                  : 'border-slate-200 dark:border-[#1E273C] bg-[#F8FAFC] dark:bg-[#181F32] text-xs font-semibold hover:border-[#1860FC]'
+              }`}
+            >
+              <ArrowLeftRight className="w-4 h-4 mb-1.5" />
+              <span className="text-xs font-extrabold block truncate">
+                Extrato ({transactionsCount})
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                onSelectTab('settings');
+                onClose();
+              }}
+              className={`p-3 rounded-2xl border text-left transition-colors cursor-pointer ${
+                activeTab === 'settings'
+                  ? 'border-[#1860FC] bg-[#1860FC] text-white font-bold'
+                  : 'border-slate-200 dark:border-[#1E273C] bg-[#F8FAFC] dark:bg-[#181F32] text-xs font-semibold hover:border-[#1860FC]'
+              }`}
+            >
+              <SlidersHorizontal className="w-4 h-4 mb-1.5" />
+              <span className="text-xs font-extrabold block truncate">
+                Ajustes ({categoriesCount})
+              </span>
+            </button>
           </div>
 
-          {/* Section 2: Atalhos Rápidos para as outras páginas */}
-          <div>
-            <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
-              Atalhos de Navegação
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  onSelectTab('overview');
-                  onClose();
-                }}
-                className={`p-2.5 rounded-2xl border text-center transition-colors ${
-                  activeTab === 'overview'
-                    ? 'border-[#1456FF] bg-[#1456FF] text-white font-bold'
-                    : 'border-slate-200 dark:border-[#1E273C] bg-white dark:bg-[#080B12] text-xs font-semibold hover:border-[#1456FF]'
-                }`}
-              >
-                <LayoutGrid className="w-4 h-4 mx-auto mb-1" />
-                <span className="text-[11px] block truncate">Visão Geral</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  onSelectTab('quick_launch');
-                  onClose();
-                }}
-                className={`p-2.5 rounded-2xl border text-center transition-colors ${
-                  activeTab === 'quick_launch'
-                    ? 'border-[#1456FF] bg-[#1456FF] text-white font-bold'
-                    : 'border-slate-200 dark:border-[#1E273C] bg-white dark:bg-[#080B12] text-xs font-semibold hover:border-[#1456FF]'
-                }`}
-              >
-                <Zap className="w-4 h-4 mx-auto mb-1" />
-                <span className="text-[11px] block truncate">1-Clique</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  onSelectTab('transactions');
-                  onClose();
-                }}
-                className={`p-2.5 rounded-2xl border text-center transition-colors ${
-                  activeTab === 'transactions'
-                    ? 'border-[#1456FF] bg-[#1456FF] text-white font-bold'
-                    : 'border-slate-200 dark:border-[#1E273C] bg-white dark:bg-[#080B12] text-xs font-semibold hover:border-[#1456FF]'
-                }`}
-              >
-                <ArrowLeftRight className="w-4 h-4 mx-auto mb-1" />
-                <span className="text-[11px] block truncate">Livro Caixa</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Section 3: Seleção de Competência Mensal */}
-          <div className="bg-[#F4F6FB] dark:bg-[#181F32] p-4 rounded-3xl border border-slate-200/80 dark:border-[#1E273C]">
+          <div className="bg-[#F8FAFC] dark:bg-[#181F32] p-4 rounded-3xl border border-slate-200/80 dark:border-[#1E273C]">
             <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 mb-2.5">
-              <Calendar className="w-4 h-4 text-[#1456FF] dark:text-[#E2FF1A]" />
+              <Calendar className="w-4 h-4 text-[#1860FC] dark:text-[#D4F907]" />
               <span>Competência Mensal Ativa: {monthLabel}</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -285,10 +194,10 @@ export function SidebarDrawer({
                   key={m.key}
                   type="button"
                   onClick={() => onChangeMonth(m.key)}
-                  className={`px-3 py-2 text-xs font-bold rounded-2xl transition-colors whitespace-nowrap ${
+                  className={`px-3 py-2 text-xs font-bold rounded-2xl transition-colors whitespace-nowrap cursor-pointer ${
                     activeMonth === m.key
-                      ? 'bg-[#1456FF] text-white shadow-xs'
-                      : 'bg-white dark:bg-[#080B12] border border-slate-200 dark:border-[#242F48] text-slate-700 dark:text-slate-300 hover:border-[#1456FF]'
+                      ? 'bg-[#1860FC] text-white shadow-xs'
+                      : 'bg-white dark:bg-[#000000] border border-slate-200 dark:border-[#242F48] text-slate-700 dark:text-slate-300 hover:border-[#1860FC]'
                   }`}
                 >
                   {m.label}
@@ -297,94 +206,78 @@ export function SidebarDrawer({
             </div>
           </div>
 
-          {/* Section 4: Preferências, App PWA & Nuvem */}
           <div className="space-y-3">
-            <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-              Aplicativo, Preferências & Nuvem
-            </div>
-
             <PWAInstallButton variant="drawer" />
 
-            {/* Theme Toggle */}
             <button
               type="button"
               onClick={onToggleTheme}
-              className="w-full flex items-center justify-between p-3.5 bg-white dark:bg-[#181F32] border border-slate-200 dark:border-[#1E273C] rounded-2xl text-xs font-bold hover:border-[#1456FF] transition-colors"
+              className="w-full flex items-center justify-between p-3.5 bg-white dark:bg-[#181F32] border border-slate-200 dark:border-[#1E273C] rounded-2xl text-xs font-bold hover:border-[#1860FC] transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-2.5">
                 {theme === 'dark' ? (
-                  <Sun className="w-4 h-4 text-[#E2FF1A]" />
+                  <Sun className="w-4 h-4 text-[#D4F907]" />
                 ) : (
-                  <Moon className="w-4 h-4 text-[#1456FF]" />
+                  <Moon className="w-4 h-4 text-[#1860FC]" />
                 )}
                 <span>Aparência da Interface</span>
               </div>
-              <span className="px-3 py-1 rounded-full bg-[#F4F6FB] dark:bg-[#080B12] text-xs">
-                {theme === 'dark' ? 'Modo Escuro Ativo' : 'Modo Claro Ativo'}
+              <span className="px-3 py-1 rounded-full bg-[#F8FAFC] dark:bg-[#000000] text-xs">
+                {theme === 'dark' ? 'Modo Escuro' : 'Modo Claro'}
               </span>
             </button>
 
-            {/* Cloud Sync */}
             <div className="p-3.5 bg-white dark:bg-[#181F32] border border-slate-200 dark:border-[#1E273C] rounded-2xl text-xs flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
-                <Cloud className="w-4 h-4 text-[#1456FF] dark:text-[#E2FF1A] shrink-0" />
+                <Cloud className="w-4 h-4 text-[#1860FC] dark:text-[#D4F907] shrink-0" />
                 <div className="truncate">
                   {currentUser ? (
                     <>
-                      <div className="font-bold truncate text-[#0A0E17] dark:text-white">
+                      <div className="font-bold truncate text-[#000000] dark:text-white">
                         {currentUser.email}
                       </div>
-                      <div className="text-[11px] text-emerald-600 dark:text-[#E2FF1A] flex items-center gap-1">
+                      <div className="text-[11px] text-emerald-600 dark:text-[#D4F907] flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3" /> Nuvem sincronizada
                       </div>
                     </>
                   ) : (
                     <>
-                      <div className="font-bold text-[#0A0E17] dark:text-white">Modo Local</div>
+                      <div className="font-bold text-[#000000] dark:text-white">Modo Demo</div>
                       <div className="text-[11px] text-slate-400">Salvo neste navegador</div>
                     </>
                   )}
                 </div>
               </div>
 
-              {currentUser ? (
-                <button
-                  type="button"
-                  onClick={onSignOut}
-                  className="px-3 py-1.5 text-xs font-bold rounded-full bg-slate-100 dark:bg-[#242F48] hover:bg-slate-200 transition-colors shrink-0 flex items-center gap-1"
-                >
-                  <LogOut className="w-3 h-3" />
-                  Sair
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={onSignOut}
-                  className="px-3 py-1.5 text-xs font-bold rounded-full bg-[#1456FF] text-white hover:bg-[#0D44D9] transition-colors shrink-0 flex items-center gap-1"
-                >
-                  <LogOut className="w-3 h-3" />
-                  Fazer Login
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={onSignOut}
+                className="px-3 py-1.5 text-xs font-bold rounded-full bg-slate-100 dark:bg-[#242F48] hover:bg-slate-200 transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
+              >
+                <LogOut className="w-3 h-3" />
+                Sair
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Drawer Bottom CTA */}
         <div className="shrink-0 p-5 border-t border-slate-200 dark:border-[#1E273C] bg-white dark:bg-[#111624] space-y-2">
           <button
             type="button"
             onClick={() => {
               onClose();
-              onOpenNewModal('expense');
+              onOpenNewModal('expense', 'quick');
             }}
-            className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-xs font-extrabold text-white bg-[#1456FF] rounded-full hover:bg-[#0D44D9] transition-colors shadow-xs"
+            className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-xs font-extrabold text-white bg-[#1860FC] rounded-full hover:bg-[#0D48D9] transition-colors shadow-xs cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            Novo Lançamento
+            + Novo Lançamento
           </button>
           <div className="text-center text-[11px] text-slate-400 font-medium">
-            Sobra Atual do Mês: <strong className="text-[#1456FF] dark:text-[#E2FF1A] font-mono tabular-nums">{formatBrlCents(netSurplusCents, true)}</strong>
+            Sobra Atual do Mês:{' '}
+            <strong className="text-[#1860FC] dark:text-[#D4F907] font-mono tabular-nums">
+              {formatBrlCents(netSurplusCents, true)}
+            </strong>
           </div>
         </div>
       </aside>

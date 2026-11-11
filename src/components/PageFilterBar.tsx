@@ -175,21 +175,21 @@ export function PageFilterBar({
   return (
     <section
       aria-label="Filtro de Período e Filtro Personalizado"
-      className="bg-white dark:bg-[#111624] border border-slate-200/80 dark:border-[#1E273C] rounded-2xl p-3 sm:p-3.5 mb-3 shadow-xs transition-all"
+      className="bg-white dark:bg-[#111624] border border-slate-200/80 dark:border-[#1E273C] rounded-2xl p-3.5 sm:p-4 mb-5 shadow-xs transition-all"
     >
       {/* Top Main Bar: Current Period, Month Shortcuts & Custom Filter Trigger */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Left: Active period context & quick month tabs */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#F4F6FB] dark:bg-[#181F32] border border-slate-200/80 dark:border-[#242F48] shrink-0">
-            <Calendar className="w-3.5 h-3.5 text-[#1456FF] dark:text-[#E2FF1A]" />
-            <span className="text-xs font-bold text-[#0A0E17] dark:text-white">
+        <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#F8FAFC] dark:bg-[#111624] border border-slate-200/80 dark:border-[#242F48] shrink-0">
+            <Calendar className="w-3.5 h-3.5 text-[#1860FC] dark:text-[#D4F907]" />
+            <span className="text-xs font-bold text-[#000000] dark:text-white">
               {activePeriodText}
             </span>
           </div>
 
           {/* Quick Month Selectors */}
-          <div className="flex items-center gap-1 p-0.5 bg-[#F4F6FB] dark:bg-[#181F32] rounded-xl overflow-x-auto max-w-full">
+          <div className="flex items-center gap-1.5 p-1 bg-[#F8FAFC] dark:bg-[#181F32] rounded-xl overflow-x-auto max-w-full">
             {AVAILABLE_MONTHS.map((m) => {
               const isSelected = criteria.periodMode === 'month' && criteria.monthKey === m.key;
               return (
@@ -197,10 +197,10 @@ export function PageFilterBar({
                   key={m.key}
                   type="button"
                   onClick={() => handleSelectMonth(m.key)}
-                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors whitespace-nowrap shrink-0 ${
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                     isSelected
-                      ? 'bg-[#1456FF] text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-[#0A0E17] dark:hover:text-white'
+                      ? 'bg-[#1860FC] text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white'
                   }`}
                 >
                   <span className="sm:hidden">{m.shortLabel}</span>
@@ -211,10 +211,10 @@ export function PageFilterBar({
             <button
               type="button"
               onClick={handleSelectAllMonths}
-              className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors whitespace-nowrap shrink-0 ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 criteria.periodMode === 'month' && criteria.monthKey === 'all'
-                  ? 'bg-[#1456FF] text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-[#0A0E17] dark:hover:text-white'
+                  ? 'bg-[#1860FC] text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white'
               }`}
             >
               Todos
@@ -223,10 +223,10 @@ export function PageFilterBar({
         </div>
 
         {/* Right: Live mini metrics and Custom Filter Toggle Button */}
-        <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
-          <div className="hidden sm:flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 pr-1">
+        <div className="flex items-center justify-end gap-2.5 shrink-0">
+          <div className="hidden lg:flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 pr-1">
             <span>
-              <strong className="text-[#0A0E17] dark:text-white font-bold">{totalFilteredCount}</strong>{' '}
+              <strong className="text-[#000000] dark:text-white font-bold">{totalFilteredCount}</strong>{' '}
               {totalFilteredCount === 1 ? 'item' : 'itens'}
             </span>
             <span>·</span>
@@ -235,8 +235,8 @@ export function PageFilterBar({
               <strong
                 className={`font-mono font-bold ${
                   summary.netSurplusCents >= 0
-                    ? 'text-[#1456FF] dark:text-[#E2FF1A]'
-                    : 'text-red-500'
+                    ? 'text-[#1860FC] dark:text-[#D4F907]'
+                    : 'text-rose-500'
                 }`}
               >
                 {formatBrlCents(summary.netSurplusCents, true)}
@@ -247,18 +247,19 @@ export function PageFilterBar({
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all ${
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
               isCustomActive
-                ? 'bg-[#1456FF] text-white border-[#1456FF] shadow-xs'
+                ? 'bg-[#1860FC] text-white border-[#1860FC] shadow-xs'
                 : isExpanded
-                ? 'bg-[#F4F6FB] dark:bg-[#181F32] border-[#1456FF] text-[#1456FF] dark:text-[#E2FF1A]'
-                : 'bg-white dark:bg-[#181F32] border-slate-200 dark:border-[#242F48] text-slate-700 dark:text-slate-300 hover:border-[#1456FF]'
+                ? 'bg-[#F8FAFC] dark:bg-[#111624] border-[#1860FC] text-[#1860FC] dark:text-[#D4F907]'
+                : 'bg-white dark:bg-[#111624] border-slate-200 dark:border-[#242F48] text-slate-700 dark:text-slate-300 hover:border-[#1860FC]'
             }`}
           >
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-            <span>Filtro Personalizado</span>
+            <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
+            <span className="sm:hidden">Filtros</span>
+            <span className="hidden sm:inline">Filtro Personalizado</span>
             {activeFiltersCount > 0 && (
-              <span className="w-4 h-4 rounded-full bg-[#E2FF1A] text-[#0A0E17] text-[10px] font-extrabold flex items-center justify-center">
+              <span className="w-4 h-4 rounded-full bg-[#D4F907] text-[#000000] text-[10px] font-extrabold flex items-center justify-center">
                 {activeFiltersCount}
               </span>
             )}
@@ -279,7 +280,7 @@ export function PageFilterBar({
           </span>
 
           {criteria.periodMode === 'range' && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-[#1456FF] dark:text-blue-300 border border-blue-200 dark:border-blue-900/50 font-medium">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-50 dark:bg-blue-950/60 text-[#1860FC] dark:text-cyan-300 border border-cyan-200 dark:border-cyan-900/50 font-medium">
               Data: {activePeriodText}
               <button
                 type="button"
@@ -292,7 +293,7 @@ export function PageFilterBar({
                     endDate: '',
                   })
                 }
-                className="hover:text-red-500 ml-0.5"
+                className="hover:text-rose-500 ml-0.5"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -305,7 +306,7 @@ export function PageFilterBar({
               <button
                 type="button"
                 onClick={() => onChangeCriteria({ ...criteria, direction: 'all' })}
-                className="hover:text-red-500 ml-0.5"
+                className="hover:text-rose-500 ml-0.5"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -318,7 +319,7 @@ export function PageFilterBar({
               <button
                 type="button"
                 onClick={() => onChangeCriteria({ ...criteria, nature: 'all' })}
-                className="hover:text-red-500 ml-0.5"
+                className="hover:text-rose-500 ml-0.5"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -331,7 +332,7 @@ export function PageFilterBar({
               <button
                 type="button"
                 onClick={() => onChangeCriteria({ ...criteria, categoryId: 'all' })}
-                className="hover:text-red-500 ml-0.5"
+                className="hover:text-rose-500 ml-0.5"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -344,7 +345,7 @@ export function PageFilterBar({
               <button
                 type="button"
                 onClick={() => onChangeCriteria({ ...criteria, minAmountCents: undefined })}
-                className="hover:text-red-500 ml-0.5"
+                className="hover:text-rose-500 ml-0.5"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -357,7 +358,7 @@ export function PageFilterBar({
               <button
                 type="button"
                 onClick={() => onChangeCriteria({ ...criteria, maxAmountCents: undefined })}
-                className="hover:text-red-500 ml-0.5"
+                className="hover:text-rose-500 ml-0.5"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -370,7 +371,7 @@ export function PageFilterBar({
               <button
                 type="button"
                 onClick={() => onChangeCriteria({ ...criteria, searchQuery: '' })}
-                className="hover:text-red-500 ml-0.5"
+                className="hover:text-rose-500 ml-0.5"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -380,7 +381,7 @@ export function PageFilterBar({
           <button
             type="button"
             onClick={handleResetToDefault}
-            className="text-[11px] font-bold text-[#1456FF] dark:text-[#E2FF1A] hover:underline ml-1"
+            className="text-[11px] font-bold text-[#1860FC] dark:text-[#D4F907] hover:underline ml-1"
           >
             Limpar todos
           </button>
@@ -396,15 +397,15 @@ export function PageFilterBar({
           {/* Header of expanded filter */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-[#1456FF] dark:text-[#E2FF1A]" />
-              <h3 className="text-xs font-bold text-[#0A0E17] dark:text-white uppercase tracking-wider">
+              <Filter className="w-4 h-4 text-[#1860FC] dark:text-[#D4F907]" />
+              <h3 className="text-xs font-bold text-[#000000] dark:text-white uppercase tracking-wider">
                 Configurar Filtro Personalizado
               </h3>
             </div>
             <button
               type="button"
               onClick={handleResetToDefault}
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-red-500 transition-colors"
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-rose-500 transition-colors"
             >
               <RotateCcw className="w-3 h-3" />
               Restaurar Padrão
@@ -423,7 +424,7 @@ export function PageFilterBar({
                   type="date"
                   value={localStartDate}
                   onChange={(e) => setLocalStartDate(e.target.value)}
-                  className="flex-1 px-2.5 py-1.5 text-xs bg-[#F4F6FB] dark:bg-[#181F32] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#0A0E17] dark:text-white focus:outline-none focus:border-[#1456FF]"
+                  className="flex-1 px-2.5 py-1.5 text-xs bg-[#F8FAFC] dark:bg-[#111624] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#000000] dark:text-white focus:outline-none focus:border-[#1860FC]"
                   placeholder="Data Início"
                 />
                 <span className="text-xs text-slate-400">até</span>
@@ -431,7 +432,7 @@ export function PageFilterBar({
                   type="date"
                   value={localEndDate}
                   onChange={(e) => setLocalEndDate(e.target.value)}
-                  className="flex-1 px-2.5 py-1.5 text-xs bg-[#F4F6FB] dark:bg-[#181F32] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#0A0E17] dark:text-white focus:outline-none focus:border-[#1456FF]"
+                  className="flex-1 px-2.5 py-1.5 text-xs bg-[#F8FAFC] dark:bg-[#111624] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#000000] dark:text-white focus:outline-none focus:border-[#1860FC]"
                   placeholder="Data Fim"
                 />
               </div>
@@ -441,28 +442,28 @@ export function PageFilterBar({
                 <button
                   type="button"
                   onClick={() => setPresetDateRange('2026-11-01', '2026-11-30')}
-                  className="text-[10px] px-2 py-0.5 rounded-md bg-[#F4F6FB] dark:bg-[#181F32] border border-slate-200 dark:border-[#242F48] hover:border-[#1456FF]"
+                  className="text-[10px] px-2 py-0.5 rounded-md bg-[#F8FAFC] dark:bg-[#111624] border border-slate-200 dark:border-[#242F48] hover:border-[#1860FC]"
                 >
                   Este Mês (Nov)
                 </button>
                 <button
                   type="button"
                   onClick={() => setPresetDateRange('2026-10-01', '2026-10-31')}
-                  className="text-[10px] px-2 py-0.5 rounded-md bg-[#F4F6FB] dark:bg-[#181F32] border border-slate-200 dark:border-[#242F48] hover:border-[#1456FF]"
+                  className="text-[10px] px-2 py-0.5 rounded-md bg-[#F8FAFC] dark:bg-[#111624] border border-slate-200 dark:border-[#242F48] hover:border-[#1860FC]"
                 >
                   Mês Passado (Out)
                 </button>
                 <button
                   type="button"
                   onClick={() => setPresetDateRange('2026-10-10', '2026-11-09')}
-                  className="text-[10px] px-2 py-0.5 rounded-md bg-[#F4F6FB] dark:bg-[#181F32] border border-slate-200 dark:border-[#242F48] hover:border-[#1456FF]"
+                  className="text-[10px] px-2 py-0.5 rounded-md bg-[#F8FAFC] dark:bg-[#111624] border border-slate-200 dark:border-[#242F48] hover:border-[#1860FC]"
                 >
                   Últimos 30 Dias
                 </button>
                 <button
                   type="button"
                   onClick={() => setPresetDateRange('2026-01-01', '2026-12-31')}
-                  className="text-[10px] px-2 py-0.5 rounded-md bg-[#F4F6FB] dark:bg-[#181F32] border border-slate-200 dark:border-[#242F48] hover:border-[#1456FF]"
+                  className="text-[10px] px-2 py-0.5 rounded-md bg-[#F8FAFC] dark:bg-[#111624] border border-slate-200 dark:border-[#242F48] hover:border-[#1860FC]"
                 >
                   Ano 2026
                 </button>
@@ -474,13 +475,13 @@ export function PageFilterBar({
               <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 block">
                 Direção do Fluxo
               </label>
-              <div className="grid grid-cols-3 gap-1 bg-[#F4F6FB] dark:bg-[#181F32] p-1 rounded-xl border border-slate-200 dark:border-[#242F48]">
+              <div className="grid grid-cols-3 gap-1 bg-[#F8FAFC] dark:bg-[#111624] p-1 rounded-xl border border-slate-200 dark:border-[#242F48]">
                 <button
                   type="button"
                   onClick={() => setLocalDirection('all')}
                   className={`py-1 text-[11px] font-bold rounded-lg transition-colors ${
                     localDirection === 'all'
-                      ? 'bg-[#1456FF] text-white shadow-xs'
+                      ? 'bg-[#1860FC] text-white shadow-xs'
                       : 'text-slate-600 dark:text-slate-400'
                   }`}
                 >
@@ -491,7 +492,7 @@ export function PageFilterBar({
                   onClick={() => setLocalDirection('income')}
                   className={`py-1 text-[11px] font-bold rounded-lg transition-colors ${
                     localDirection === 'income'
-                      ? 'bg-[#E2FF1A] text-[#0A0E17] shadow-xs'
+                      ? 'bg-[#D4F907] text-[#000000] shadow-xs'
                       : 'text-slate-600 dark:text-slate-400'
                   }`}
                 >
@@ -502,7 +503,7 @@ export function PageFilterBar({
                   onClick={() => setLocalDirection('expense')}
                   className={`py-1 text-[11px] font-bold rounded-lg transition-colors ${
                     localDirection === 'expense'
-                      ? 'bg-[#1456FF] text-white shadow-xs'
+                      ? 'bg-[#1860FC] text-white shadow-xs'
                       : 'text-slate-600 dark:text-slate-400'
                   }`}
                 >
@@ -519,7 +520,7 @@ export function PageFilterBar({
               <select
                 value={localNature}
                 onChange={(e) => setLocalNature(e.target.value)}
-                className="w-full px-2.5 py-1.5 text-xs bg-[#F4F6FB] dark:bg-[#181F32] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#0A0E17] dark:text-white focus:outline-none focus:border-[#1456FF]"
+                className="w-full px-2.5 py-1.5 text-xs bg-[#F8FAFC] dark:bg-[#111624] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#000000] dark:text-white focus:outline-none focus:border-[#1860FC]"
               >
                 <option value="all">Todas as Naturezas</option>
                 <option value="fixed">Gasto Fixo Essencial</option>
@@ -538,7 +539,7 @@ export function PageFilterBar({
               <select
                 value={localCategoryId}
                 onChange={(e) => setLocalCategoryId(e.target.value)}
-                className="w-full px-2.5 py-1.5 text-xs bg-[#F4F6FB] dark:bg-[#181F32] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#0A0E17] dark:text-white focus:outline-none focus:border-[#1456FF]"
+                className="w-full px-2.5 py-1.5 text-xs bg-[#F8FAFC] dark:bg-[#111624] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#000000] dark:text-white focus:outline-none focus:border-[#1860FC]"
               >
                 <option value="all">Todas as Categorias ({categories.length})</option>
                 {categories.map((c) => (
@@ -561,7 +562,7 @@ export function PageFilterBar({
                   value={localMinVal}
                   onChange={(e) => setLocalMinVal(e.target.value)}
                   placeholder="Mín: 0,00"
-                  className="w-1/2 px-2.5 py-1.5 text-xs bg-[#F4F6FB] dark:bg-[#181F32] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#0A0E17] dark:text-white focus:outline-none focus:border-[#1456FF]"
+                  className="w-1/2 px-2.5 py-1.5 text-xs bg-[#F8FAFC] dark:bg-[#111624] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#000000] dark:text-white focus:outline-none focus:border-[#1860FC]"
                 />
                 <span className="text-xs text-slate-400">-</span>
                 <input
@@ -569,7 +570,7 @@ export function PageFilterBar({
                   value={localMaxVal}
                   onChange={(e) => setLocalMaxVal(e.target.value)}
                   placeholder="Máx: 0,00"
-                  className="w-1/2 px-2.5 py-1.5 text-xs bg-[#F4F6FB] dark:bg-[#181F32] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#0A0E17] dark:text-white focus:outline-none focus:border-[#1456FF]"
+                  className="w-1/2 px-2.5 py-1.5 text-xs bg-[#F8FAFC] dark:bg-[#111624] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#000000] dark:text-white focus:outline-none focus:border-[#1860FC]"
                 />
               </div>
             </div>
@@ -586,7 +587,7 @@ export function PageFilterBar({
                   value={localSearch}
                   onChange={(e) => setLocalSearch(e.target.value)}
                   placeholder="Ex: Supermercado, Aluguel, Combustível, Salário..."
-                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-[#F4F6FB] dark:bg-[#181F32] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#0A0E17] dark:text-white focus:outline-none focus:border-[#1456FF]"
+                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-[#F8FAFC] dark:bg-[#111624] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#000000] dark:text-white focus:outline-none focus:border-[#1860FC]"
                 />
               </div>
             </div>
@@ -597,15 +598,15 @@ export function PageFilterBar({
             <button
               type="button"
               onClick={() => setIsExpanded(false)}
-              className="px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-[#0A0E17] dark:hover:text-white rounded-xl transition-colors"
+              className="px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white rounded-xl transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-extrabold text-white bg-[#1456FF] rounded-xl hover:bg-[#0D44D9] transition-colors shadow-xs"
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-extrabold text-white bg-[#1860FC] rounded-xl hover:bg-[#0D48D9] transition-colors shadow-xs"
             >
-              <Check className="w-3.5 h-3.5 text-[#E2FF1A]" />
+              <Check className="w-3.5 h-3.5 text-[#D4F907]" />
               Aplicar Filtro Personalizado
             </button>
           </div>

@@ -1,8 +1,21 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+@theme {
+  --color-brand-blue: #1860FC;
+  --color-brand-cyan: #1860FC;
+  --color-brand-sky: #3B82F6;
+  --color-brand-lime: #D4F907;
+  --color-brand-dark: #111624;
+  --color-brand-black: #0A0E17;
+  --color-brand-white: #FFFFFF;
+}
+
 @layer base {
   :root {
+    --brand-primary: #1860FC;
+    --brand-secondary: #3B82F6;
+    --brand-accent: #D4F907;
     --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;

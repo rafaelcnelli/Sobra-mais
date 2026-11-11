@@ -23,20 +23,19 @@ import {
 } from 'firebase/firestore';
 import {
   Plus,
-  Cloud,
   LogOut,
-  Calendar,
   CheckCircle2,
   Sun,
   Moon,
   LayoutGrid,
-  Zap,
+  Compass,
   ArrowLeftRight,
   SlidersHorizontal,
-  PiggyBank,
-  Menu,
   Search,
   X,
+  RotateCcw,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import {
   auth,
@@ -47,7 +46,9 @@ import {
 } from './firebase';
 import {
   formatBrlCents,
-  calculateMonthlySummary,
+  setGlobalPrivacyMode,
+  getTransactionStatus,
+  isTransactionRecurring,
   calculateDynamicSummary,
   filterTransactionsByCriteria,
   searchTransactionsAcrossDataset,
@@ -65,29 +66,31 @@ import {
 } from './utils/seedData';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { OverviewTab } from './components/OverviewTab';
-import { QuickLaunchTab } from './components/QuickLaunchTab';
 import { TransactionsTab } from './components/TransactionsTab';
 import { CategoriesTab } from './components/CategoriesTab';
 import { MonthlyAnalysisTab } from './components/MonthlyAnalysisTab';
-import { TransactionModal } from './components/TransactionModal';
+import { TransactionModal, type QuickAddModalTab } from './components/TransactionModal';
 import { SidebarDrawer } from './components/SidebarDrawer';
 import { DesktopSidebar } from './components/DesktopSidebar';
 import { PageFilterBar } from './components/PageFilterBar';
 import { AuthPage } from './components/AuthPage';
 import { PWAInstallButton, OfflineIndicator } from './components/PWAInstallButton';
 
-export type ActiveTab = 'overview' | 'quick_launch' | 'transactions' | 'categories' | 'analysis';
+export type ActiveTab = 'dashboard' | 'planner' | 'transactions' | 'settings';
 export type ThemeMode = 'light' | 'dark';
 
 const LOCAL_TX_KEY = 'sobramais_local_transactions_v1';
 const LOCAL_CAT_KEY = 'sobramais_local_categories_v1';
 const LOCAL_PLAN_KEY = 'sobramais_local_plans_v1';
 const LOCAL_THEME_KEY = 'sobramais_theme_mode_v1';
+const LOCAL_PRIVACY_KEY = 'sobramais_privacy_mode_v1';
+const LOCAL_PREDICTIVE_KEY = 'sobramais_predictive_enabled_v1';
 const GUEST_SESSION_KEY = 'sobramais_guest_session_v1';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
-  const [filterCriteria, setFilterCriteria] = useState<CustomFilterCriteria>(DEFAULT_FILTER_CRITERIA);
+  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+  const [filterCriteria, setFilterCriteria] =
+    useState<CustomFilterCriteria>(DEFAULT_FILTER_CRITERIA);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isGuestMode, setIsGuestMode] = useState<boolean>(() => {
     try {
@@ -96,6 +99,51 @@ export default function App() {
       return false;
     }
   });
+
+  const [isPrivacyMode, setIsPrivacyMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(LOCAL_PRIVACY_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const [isPredictiveEnabled, setIsPredictiveEnabled] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_PREDICTIVE_KEY);
+      if (saved === 'false') return false;
+      return true;
+    } catch {
+      return true;
+    }
+  });
+
+  // Synchronously sync global privacy mode so formatBrlCents masks values across all components
+  setGlobalPrivacyMode(isPrivacyMode);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_PRIVACY_KEY, String(isPrivacyMode));
+    } catch {
+      // ignore
+    }
+  }, [isPrivacyMode]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_PREDICTIVE_KEY, String(isPredictiveEnabled));
+    } catch {
+      // ignore
+    }
+  }, [isPredictiveEnabled]);
+
+  const togglePrivacyMode = useCallback(() => {
+    setIsPrivacyMode((prev) => {
+      const next = !prev;
+      setGlobalPrivacyMode(next);
+      return next;
+    });
+  }, []);
 
   const activeMonth =
     filterCriteria.periodMode === 'month' && filterCriteria.monthKey !== 'all'
@@ -120,6 +168,7 @@ export default function App() {
       searchQuery: value,
     }));
   }, []);
+
   const [theme, setTheme] = useState<ThemeMode>(() => {
     try {
       const saved = localStorage.getItem(LOCAL_THEME_KEY);
@@ -129,10 +178,13 @@ export default function App() {
     }
     return 'light';
   });
+
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState<boolean>(false);
   const [authErrorMsg, setAuthErrorMsg] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [undoTxId, setUndoTxId] = useState<string | null>(null);
+  const [cloudCatIds, setCloudCatIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const root = document.documentElement;
@@ -188,18 +240,33 @@ export default function App() {
     };
   });
 
-  // Modal state
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Global Quick-Add & Detailed Modal state (isQuickAddOpen)
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [modalDefaultType, setModalDefaultType] = useState<'income' | 'expense'>('expense');
+  const [quickAddInitialTab, setQuickAddInitialTab] = useState<QuickAddModalTab>('quick');
   const [editingTransaction, setEditingTransaction] = useState<FinancialTransaction | null>(null);
 
-  const showToast = useCallback((msg: string) => {
+  const openGlobalQuickAdd = useCallback(
+    (defaultType: 'income' | 'expense' = 'expense', initialTab: QuickAddModalTab = 'quick') => {
+      setEditingTransaction(null);
+      setModalDefaultType(defaultType);
+      setQuickAddInitialTab(initialTab);
+      setIsQuickAddOpen(true);
+    },
+    []
+  );
+
+  const showToast = useCallback((msg: string, undoId: string | null = null) => {
     setToastMessage(msg);
+    setUndoTxId(undoId);
   }, []);
 
   useEffect(() => {
     if (!toastMessage) return;
-    const timer = window.setTimeout(() => setToastMessage(null), 3500);
+    const timer = window.setTimeout(() => {
+      setToastMessage(null);
+      setUndoTxId(null);
+    }, 4500);
     return () => window.clearTimeout(timer);
   }, [toastMessage]);
 
@@ -273,6 +340,11 @@ export default function App() {
             dateIso: data.dateIso,
             monthKey: data.monthKey,
             isStandardTemplate: Boolean(data.isStandardTemplate),
+            status: data.status === 'pending' ? 'pending' : 'completed',
+            isRecurring:
+              typeof data.isRecurring === 'boolean'
+                ? data.isRecurring
+                : data.expenseNature === 'fixed' || data.expenseNature === 'income_recurring',
             notes: data.notes ?? '',
           };
         });
@@ -284,8 +356,11 @@ export default function App() {
     const unsubCat = onSnapshot(
       catQuery,
       (snapshot) => {
+        const idsSet = new Set<string>();
         const customCats: FinancialCategory[] = snapshot.docs.map((d) => {
+          idsSet.add(d.id);
           const data = d.data();
+          const isDefaultOverride = getDefaultCategories(uid).some((def) => def.id === d.id);
           return {
             id: d.id,
             uid: data.uid,
@@ -295,13 +370,14 @@ export default function App() {
             monthlyLimitCents: data.monthlyLimitCents,
             defaultAmountCents: data.defaultAmountCents,
             isStandardPreset: Boolean(data.isStandardPreset),
-            isSystemDefault: false,
+            isSystemDefault: isDefaultOverride,
           };
         });
+        setCloudCatIds(idsSet);
         const defaults = getDefaultCategories(uid);
         const merged = [
-          ...customCats.filter((c) => !defaults.some((d) => d.id === c.id)),
-          ...defaults,
+          ...customCats,
+          ...defaults.filter((d) => !customCats.some((c) => c.id === d.id)),
         ];
         setCategories(merged);
       },
@@ -350,7 +426,7 @@ export default function App() {
       // ignore
     }
     if (!customProfile) {
-      showToast('Você entrou no Modo Convidado. Os dados são salvos localmente.');
+      showToast('Modo de Demonstração Rápida ativado! Dados salvos localmente.');
     }
   };
 
@@ -375,7 +451,7 @@ export default function App() {
     if (currentUser) {
       try {
         await signOut(auth);
-      } catch (err: any) {
+      } catch {
         // ignore
       }
     }
@@ -386,9 +462,16 @@ export default function App() {
 
   const handleSaveTransaction = async (
     txData: Omit<FinancialTransaction, 'id' | 'uid'>,
-    existingId?: string
+    existingId?: string,
+    customToastMsg?: string,
+    enableUndo = false
   ) => {
     const txId = existingId ?? `tx_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const normalizedStatus = txData.status === 'pending' ? 'pending' : 'completed';
+    const normalizedRecurring =
+      typeof txData.isRecurring === 'boolean'
+        ? txData.isRecurring
+        : txData.expenseNature === 'fixed' || txData.expenseNature === 'income_recurring';
 
     if (currentUser) {
       const path = `users/${currentUser.uid}/transactions/${txId}`;
@@ -404,6 +487,8 @@ export default function App() {
             dateIso: txData.dateIso,
             monthKey: txData.monthKey,
             isStandardTemplate: txData.isStandardTemplate,
+            status: normalizedStatus,
+            isRecurring: normalizedRecurring,
             notes: txData.notes,
             updatedAt: serverTimestamp(),
           });
@@ -419,6 +504,8 @@ export default function App() {
             dateIso: txData.dateIso,
             monthKey: txData.monthKey,
             isStandardTemplate: txData.isStandardTemplate,
+            status: normalizedStatus,
+            isRecurring: normalizedRecurring,
             notes: txData.notes,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
@@ -434,6 +521,8 @@ export default function App() {
     } else {
       const newTx: FinancialTransaction = {
         ...txData,
+        status: normalizedStatus,
+        isRecurring: normalizedRecurring,
         id: txId,
         uid: 'demo_user',
       };
@@ -442,10 +531,42 @@ export default function App() {
       );
     }
 
-    showToast(
-      existingId
+    const message =
+      customToastMsg ??
+      (existingId
         ? `Lançamento "${txData.description}" atualizado!`
-        : `${txData.type === 'income' ? 'Entrada' : 'Saída'} "${txData.description}" (${formatBrlCents(txData.amountCents)}) registrada!`
+        : `${txData.type === 'income' ? 'Entrada' : 'Saída'} "${txData.description}" (${formatBrlCents(txData.amountCents)}) registrada!`);
+
+    showToast(message, enableUndo && !existingId ? txId : null);
+  };
+
+  const handleToggleTransactionStatus = async (tx: FinancialTransaction) => {
+    const currentStatus = getTransactionStatus(tx);
+    const nextStatus = currentStatus === 'pending' ? 'completed' : 'pending';
+    const nextLabel =
+      nextStatus === 'completed'
+        ? tx.type === 'income'
+          ? '✅ Marcado como Recebido!'
+          : '✅ Marcado como Pago!'
+        : '⏳ Marcado como Pendente!';
+
+    await handleSaveTransaction(
+      {
+        description: tx.description,
+        amountCents: tx.amountCents,
+        type: tx.type,
+        categoryId: tx.categoryId,
+        categoryName: tx.categoryName,
+        expenseNature: tx.expenseNature,
+        dateIso: tx.dateIso,
+        monthKey: tx.monthKey,
+        isStandardTemplate: tx.isStandardTemplate,
+        status: nextStatus,
+        isRecurring: isTransactionRecurring(tx),
+        notes: tx.notes,
+      },
+      tx.id,
+      `${nextLabel} "${tx.description}" (${formatBrlCents(tx.amountCents)}) — Sobra real atualizada!`
     );
   };
 
@@ -460,23 +581,35 @@ export default function App() {
     } else {
       setTransactions((prev) => prev.filter((t) => t.id !== id));
     }
-    showToast('Lançamento removido.');
+    showToast('Lançamento desfeito / removido.');
   };
 
   const handleQuickLaunchPreset = async (preset: FinancialCategory) => {
     const amountCents = preset.defaultAmountCents > 0 ? preset.defaultAmountCents : 10000;
-    await handleSaveTransaction({
-      description: preset.name,
-      amountCents,
-      type: preset.type,
-      categoryId: preset.id,
-      categoryName: preset.name,
-      expenseNature: preset.nature,
-      dateIso: `${activeMonth}-09`,
-      monthKey: activeMonth,
-      isStandardTemplate: true,
-      notes: 'Lançamento rápido via padrão 1-clique',
-    });
+    const toastMsg =
+      preset.type === 'expense'
+        ? `Gasto registrado! Sobra atualizada (-${formatBrlCents(amountCents)})`
+        : `Entrada registrada! Sobra atualizada (+${formatBrlCents(amountCents)})`;
+
+    await handleSaveTransaction(
+      {
+        description: preset.name,
+        amountCents,
+        type: preset.type,
+        categoryId: preset.id,
+        categoryName: preset.name,
+        expenseNature: preset.nature,
+        dateIso: `${activeMonth}-09`,
+        monthKey: activeMonth,
+        isStandardTemplate: true,
+        status: 'completed',
+        isRecurring: preset.nature === 'fixed' || preset.nature === 'income_recurring',
+        notes: 'Lançamento rápido via padrão 1-clique',
+      },
+      undefined,
+      toastMsg,
+      true
+    );
   };
 
   const handleCreateCategory = async (catData: Omit<FinancialCategory, 'id' | 'uid'>) => {
@@ -507,7 +640,43 @@ export default function App() {
       };
       setCategories((prev) => [newCat, ...prev]);
     }
-    showToast(`Categoria personalizada "${catData.name}" criada!`);
+    showToast(`Categoria "${catData.name}" criada!`);
+  };
+
+  const handleUpdateCategory = async (updatedCat: FinancialCategory) => {
+    if (currentUser) {
+      const path = `users/${currentUser.uid}/categories/${updatedCat.id}`;
+      try {
+        if (cloudCatIds.has(updatedCat.id)) {
+          await updateDoc(doc(db, path), {
+            name: updatedCat.name,
+            type: updatedCat.type,
+            nature: updatedCat.nature,
+            monthlyLimitCents: updatedCat.monthlyLimitCents,
+            defaultAmountCents: updatedCat.defaultAmountCents,
+            isStandardPreset: updatedCat.isStandardPreset,
+            updatedAt: serverTimestamp(),
+          });
+        } else {
+          await setDoc(doc(db, path), {
+            uid: currentUser.uid,
+            name: updatedCat.name,
+            type: updatedCat.type,
+            nature: updatedCat.nature,
+            monthlyLimitCents: updatedCat.monthlyLimitCents,
+            defaultAmountCents: updatedCat.defaultAmountCents,
+            isStandardPreset: updatedCat.isStandardPreset,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+        }
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, path);
+      }
+    } else {
+      setCategories((prev) => prev.map((c) => (c.id === updatedCat.id ? updatedCat : c)));
+    }
+    showToast(`Categoria "${updatedCat.name}" atualizada!`);
   };
 
   const handleDeleteCategory = async (id: string) => {
@@ -572,6 +741,15 @@ export default function App() {
     });
   };
 
+  // Micro-interaction from Pie Chart slice click -> Redirect to Extrato filtered by category
+  const handleFilterExtratoByCategory = useCallback((categoryId: string) => {
+    setFilterCriteria((prev) => ({
+      ...prev,
+      categoryId,
+    }));
+    setActiveTab('transactions');
+  }, []);
+
   const filteredTransactions = useMemo(() => {
     return filterTransactionsByCriteria(transactions, filterCriteria);
   }, [transactions, filterCriteria]);
@@ -590,7 +768,11 @@ export default function App() {
     if (hasActiveNavbarSearch) {
       return `Busca Global: "${navbarSearchQuery.trim()}" (${filteredTransactions.length} de ${transactions.length})`;
     }
-    if (filterCriteria.periodMode === 'range' && filterCriteria.startDate && filterCriteria.endDate) {
+    if (
+      filterCriteria.periodMode === 'range' &&
+      filterCriteria.startDate &&
+      filterCriteria.endDate
+    ) {
       const [sy, sm, sd] = filterCriteria.startDate.split('-');
       const [ey, em, ed] = filterCriteria.endDate.split('-');
       return `${sd}/${sm}/${sy} a ${ed}/${em}/${ey}`;
@@ -601,10 +783,17 @@ export default function App() {
       return m ? m.label : filterCriteria.monthKey;
     }
     return 'Filtro Personalizado';
-  }, [filterCriteria, hasActiveNavbarSearch, navbarSearchQuery, filteredTransactions.length, transactions.length]);
+  }, [
+    filterCriteria,
+    hasActiveNavbarSearch,
+    navbarSearchQuery,
+    filteredTransactions.length,
+    transactions.length,
+  ]);
 
   const activePlan =
-    monthlyPlans[activeMonth] ?? getDefaultMonthlyPlan(currentUser?.uid ?? 'demo_user', activeMonth);
+    monthlyPlans[activeMonth] ??
+    getDefaultMonthlyPlan(currentUser?.uid ?? 'demo_user', activeMonth);
 
   const filteredSummary = useMemo(() => {
     return calculateDynamicSummary(filteredTransactions, activePeriodLabel, activePlan);
@@ -613,21 +802,26 @@ export default function App() {
   // 1. Initial auth state loading splash
   if (!isAuthReady) {
     return (
-      <div className="h-screen w-full bg-[#F4F6FB] dark:bg-[#080B12] flex flex-col items-center justify-center gap-4 transition-colors">
+      <div className="h-screen w-full bg-[#F8FAFC] dark:bg-[#000000] flex flex-col items-center justify-center gap-4 transition-colors">
         <img
           src="./logo-sobramais.png"
           alt="SobraMais"
-          className="h-14 w-auto object-contain rounded-2xl bg-[#F6F8FC] px-3 py-1.5 shadow-lg animate-pulse"
+          className="h-14 w-auto object-contain dark:hidden animate-pulse"
+        />
+        <img
+          src="./logo-sobramais-dark.png"
+          alt="SobraMais"
+          className="h-14 w-auto object-contain hidden dark:block animate-pulse"
         />
         <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
-          <div className="w-3.5 h-3.5 border-2 border-[#1456FF] border-t-transparent rounded-full animate-spin" />
+          <div className="w-3.5 h-3.5 border-2 border-[#1860FC] border-t-transparent rounded-full animate-spin" />
           <span>Iniciando SobraMais...</span>
         </div>
       </div>
     );
   }
 
-  // 2. If not authenticated and not in guest mode, show the dedicated Login/Cadastro Page!
+  // 2. Conditional Auth Gate (Portão de Entrada)
   if (!currentUser && !isGuestMode) {
     return (
       <ErrorBoundary>
@@ -635,7 +829,7 @@ export default function App() {
           onEnterGuestMode={handleEnterGuestMode}
           theme={theme}
           onToggleTheme={toggleTheme}
-          onSuccessToast={showToast}
+          onSuccessToast={(msg) => showToast(msg)}
         />
       </ErrorBoundary>
     );
@@ -643,8 +837,8 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className="h-screen overflow-hidden flex flex-row bg-[#F4F6FB] dark:bg-[#080B12] text-[#0A0E17] dark:text-white transition-colors duration-200">
-        {/* Desktop Left Navigation Sidebar */}
+      <div className="h-screen overflow-hidden flex flex-row bg-[#F8FAFC] dark:bg-[#000000] text-[#000000] dark:text-[#FFFFFF] transition-colors duration-200">
+        {/* Desktop Left Navigation Sidebar (4 Tabs + Highlighted + Novo Lançamento) */}
         <DesktopSidebar
           activeTab={activeTab}
           onSelectTab={setActiveTab}
@@ -653,10 +847,8 @@ export default function App() {
           onToggleTheme={toggleTheme}
           currentUser={currentUser}
           onSignOut={handleSignOut}
-          onOpenNewModal={(defaultType = 'expense') => {
-            setEditingTransaction(null);
-            setModalDefaultType(defaultType);
-            setIsModalOpen(true);
+          onOpenNewModal={(defaultType = 'expense', initialTab = 'quick') => {
+            openGlobalQuickAdd(defaultType, initialTab);
           }}
           categoriesCount={categories.length}
           transactionsCount={filteredTransactions.length}
@@ -666,47 +858,53 @@ export default function App() {
 
         {/* Workspace Content Area */}
         <div className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden">
-          {/* Top Navbar Header */}
-          <header className="shrink-0 bg-white dark:bg-[#111624] border-b border-slate-200/80 dark:border-[#1E273C] px-4 sm:px-6 py-2.5 z-30 transition-colors">
-            <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+          {/* Header Global: Marca + Busca em Tempo Real + Ações Rápidas */}
+          <header className="shrink-0 bg-white dark:bg-[#111624] border-b border-slate-200/80 dark:border-[#1E273C] px-4 sm:px-6 py-3 z-30 transition-colors">
+            <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 sm:gap-4">
               {/* Zone 1: Brand Logo (Mobile) / Active Page Indicator (Desktop) */}
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2.5 shrink-0">
                 <a
                   href="#visao-geral"
                   onClick={(e) => {
                     e.preventDefault();
-                    setActiveTab('overview');
+                    setActiveTab('dashboard');
                   }}
-                  className="md:hidden flex items-center gap-1.5 shrink-0"
+                  className="md:hidden flex items-center gap-2 shrink-0"
                 >
                   <img
                     src="./logo-sobramais.png"
                     alt="SobraMais"
-                    className="h-7 w-auto object-contain rounded-lg bg-[#F6F8FC] px-1 py-0.5"
+                    className="h-7 w-auto object-contain dark:hidden"
+                  />
+                  <img
+                    src="./logo-sobramais-dark.png"
+                    alt="SobraMais"
+                    className="h-7 w-auto object-contain hidden dark:block"
                   />
                 </a>
 
-                <div className="hidden md:flex items-center gap-2">
+                <div className="hidden md:flex items-center gap-2.5">
                   <img
                     src="./logo-icon.png"
                     alt="S+"
-                    className="w-6 h-6 rounded-lg object-contain bg-[#F6F8FC] border border-slate-200/70 dark:border-[#242F48] shrink-0"
+                    className="w-6 h-6 object-contain dark:hidden shrink-0"
                   />
-                  <span className="text-sm font-extrabold text-[#0A0E17] dark:text-white font-display whitespace-nowrap">
-                    {activeTab === 'overview' && 'Visão Geral'}
-                    {activeTab === 'quick_launch' && 'Gastos Padrões (1-Clique)'}
-                    {activeTab === 'transactions' && 'Entradas e Saídas'}
-                    {activeTab === 'categories' && 'Tipos de Gastos & Tetos'}
-                    {activeTab === 'analysis' && 'Análise Mensal & Sobras'}
-                  </span>
-                  <span className="hidden xl:inline text-xs font-medium text-slate-400 dark:text-slate-500 truncate max-w-[220px]">
-                    — {activePeriodLabel}
+                  <img
+                    src="./logo-icon-dark.png"
+                    alt="S+"
+                    className="w-6 h-6 object-contain hidden dark:block shrink-0"
+                  />
+                  <span className="text-sm font-extrabold text-[#000000] dark:text-white font-display whitespace-nowrap">
+                    {activeTab === 'dashboard' && '🏠 Visão Geral'}
+                    {activeTab === 'planner' && '🎯 Planejador & Metas'}
+                    {activeTab === 'transactions' && '💳 Extrato'}
+                    {activeTab === 'settings' && '🏷️ Ajustes & Categorias'}
                   </span>
                 </div>
               </div>
 
-              {/* Zone 2: Real-Time Global Search Bar Across Entire Loaded Dataset */}
-              <div className="relative flex-1 max-w-md mx-1 sm:mx-2">
+              {/* Zone 3: Real-Time Global Search Bar */}
+              <div className="relative flex-1 max-w-xs lg:max-w-md hidden sm:block">
                 <div className="relative flex items-center">
                   <Search className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 absolute left-3 pointer-events-none" />
                   <input
@@ -729,18 +927,18 @@ export default function App() {
                     aria-label="Buscar transações por descrição em tempo real"
                     className={`w-full pl-8 ${
                       hasActiveNavbarSearch ? 'pr-20' : 'pr-3'
-                    } py-1.5 text-xs bg-[#F4F6FB] dark:bg-[#192034] border ${
+                    } py-1.5 text-xs bg-[#F8FAFC] dark:bg-[#192034] border ${
                       hasActiveNavbarSearch
-                        ? 'border-[#1456FF] dark:border-[#E2FF1A] ring-1 ring-[#1456FF]/20 dark:ring-[#E2FF1A]/20'
+                        ? 'border-[#1860FC] dark:border-[#D4F907] ring-1 ring-[#1860FC]/20 dark:ring-[#D4F907]/20'
                         : 'border-slate-200 dark:border-[#242F48]'
-                    } rounded-full text-[#0A0E17] dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#1456FF] dark:focus:border-[#E2FF1A] transition-colors`}
+                    } rounded-full text-[#000000] dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#1860FC] dark:focus:border-[#D4F907] transition-colors`}
                   />
 
                   {hasActiveNavbarSearch && (
                     <div className="absolute right-1.5 flex items-center gap-1">
                       <span
-                        title={`${filteredTransactions.length} transações encontradas em todo o conjunto de dados`}
-                        className="px-1.5 py-0.5 text-[10px] font-mono tabular-nums font-extrabold rounded-full bg-[#1456FF] text-[#E2FF1A]"
+                        title={`${filteredTransactions.length} transações encontradas`}
+                        className="px-1.5 py-0.5 text-[10px] font-mono tabular-nums font-extrabold rounded-full bg-[#1860FC] text-white"
                       >
                         {filteredTransactions.length}/{transactions.length}
                       </span>
@@ -756,16 +954,16 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Instant Real-Time Search Results Dropdown across the entire loaded dataset */}
                 {isNavbarSearchFocused && hasActiveNavbarSearch && (
                   <div
                     role="region"
                     aria-label="Resultados da busca em tempo real"
                     className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#111624] border border-slate-200 dark:border-[#242F48] rounded-2xl shadow-xl overflow-hidden z-50"
                   >
-                    <div className="px-3 py-2 bg-[#F4F6FB] dark:bg-[#161D2F] border-b border-slate-200/80 dark:border-[#242F48] flex items-center justify-between gap-2 text-[11px]">
+                    <div className="px-3 py-2 bg-[#F8FAFC] dark:bg-[#161D2F] border-b border-slate-200/80 dark:border-[#242F48] flex items-center justify-between gap-2 text-[11px]">
                       <span className="font-bold text-slate-600 dark:text-slate-300 truncate">
-                        Todo o Conjunto ({globalDatasetSearchResults.length} de {transactions.length})
+                        Todo o Conjunto ({globalDatasetSearchResults.length} de{' '}
+                        {transactions.length})
                       </span>
                       <button
                         type="button"
@@ -774,15 +972,15 @@ export default function App() {
                           setActiveTab('transactions');
                           setIsNavbarSearchFocused(false);
                         }}
-                        className="font-extrabold text-[#1456FF] dark:text-[#E2FF1A] hover:underline whitespace-nowrap"
+                        className="font-extrabold text-[#1860FC] dark:text-[#D4F907] hover:underline whitespace-nowrap"
                       >
-                        Ver na tabela →
+                        Ver no Extrato →
                       </button>
                     </div>
 
                     {globalDatasetSearchResults.length === 0 ? (
                       <div className="p-3.5 text-center text-xs text-slate-500 dark:text-slate-400">
-                        Nenhuma transação encontrada para <strong>"{navbarSearchQuery}"</strong> em todo o conjunto de dados carregado.
+                        Nenhuma transação encontrada para <strong>"{navbarSearchQuery}"</strong>.
                       </div>
                     ) : (
                       <div className="max-h-60 overflow-y-auto divide-y divide-slate-100 dark:divide-[#1E273C]">
@@ -795,10 +993,10 @@ export default function App() {
                               setActiveTab('transactions');
                               setIsNavbarSearchFocused(false);
                             }}
-                            className="w-full px-3 py-2 text-left hover:bg-[#F4F6FB] dark:hover:bg-[#192034] flex items-center justify-between gap-2 transition-colors"
+                            className="w-full px-3 py-2 text-left hover:bg-[#F8FAFC] dark:hover:bg-[#192034] flex items-center justify-between gap-2 transition-colors"
                           >
                             <div className="min-w-0">
-                              <div className="text-xs font-bold text-[#0A0E17] dark:text-white truncate">
+                              <div className="text-xs font-bold text-[#000000] dark:text-white truncate">
                                 {tx.description}
                               </div>
                               <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
@@ -808,8 +1006,8 @@ export default function App() {
                             <span
                               className={`text-xs font-mono tabular-nums font-extrabold whitespace-nowrap shrink-0 ${
                                 tx.type === 'income'
-                                  ? 'text-emerald-600 dark:text-[#E2FF1A]'
-                                  : 'text-[#0A0E17] dark:text-white'
+                                  ? 'text-emerald-600 dark:text-[#D4F907]'
+                                  : 'text-[#000000] dark:text-white'
                               }`}
                             >
                               {tx.type === 'income'
@@ -824,75 +1022,80 @@ export default function App() {
                 )}
               </div>
 
-              {/* Zone 3: PWA Install, Theme Toggle, User Profile & New Launch CTA */}
-              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {/* Zone 4: PWA Install, Privacy Mode Toggle, Theme Toggle & Global Quick-Add CTA */}
+              <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
                 <PWAInstallButton variant="navbar" />
+
+                {/* 👁️ Botão Discreto de Modo Privacidade Global (Ocultar Valores R$) */}
+                <button
+                  type="button"
+                  onClick={togglePrivacyMode}
+                  data-testid="privacy-toggle-btn"
+                  title={
+                    isPrivacyMode
+                      ? 'Mostrar valores em Reais (Modo Privacidade Ativo)'
+                      : 'Ocultar valores em Reais (Ativar Modo Privacidade)'
+                  }
+                  aria-label={
+                    isPrivacyMode
+                      ? 'Mostrar valores monetários em Reais'
+                      : 'Ocultar valores monetários em Reais'
+                  }
+                  className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold rounded-full border transition-colors whitespace-nowrap cursor-pointer ${
+                    isPrivacyMode
+                      ? 'bg-[#D4F907] text-[#000000] border-[#D4F907]'
+                      : 'border-slate-200 dark:border-[#242F48] bg-[#F8FAFC] dark:bg-[#192034] text-[#000000] dark:text-white hover:border-[#1860FC] dark:hover:border-[#D4F907]'
+                  }`}
+                >
+                  {isPrivacyMode ? (
+                    <>
+                      <EyeOff className="w-4 h-4 shrink-0" />
+                      <span className="hidden xl:inline">R$ Oculto</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-4 h-4 text-[#1860FC] dark:text-[#D4F907] shrink-0" />
+                      <span className="hidden xl:inline">Privacidade</span>
+                    </>
+                  )}
+                </button>
 
                 <button
                   type="button"
                   onClick={toggleTheme}
                   aria-label={theme === 'dark' ? 'Ativar Modo Claro' : 'Ativar Modo Escuro'}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full border border-slate-200 dark:border-[#242F48] bg-[#F4F6FB] dark:bg-[#192034] text-[#0A0E17] dark:text-white hover:border-[#1456FF] dark:hover:border-[#E2FF1A] transition-colors whitespace-nowrap"
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold rounded-full border border-slate-200 dark:border-[#242F48] bg-[#F8FAFC] dark:bg-[#192034] text-[#000000] dark:text-white hover:border-[#1860FC] dark:hover:border-[#D4F907] transition-colors whitespace-nowrap cursor-pointer"
                 >
                   {theme === 'dark' ? (
                     <>
-                      <Sun className="w-3.5 h-3.5 text-[#E2FF1A]" />
-                      <span className="hidden lg:inline">Modo Claro</span>
+                      <Sun className="w-4 h-4 text-[#D4F907]" />
+                      <span className="hidden lg:inline">Claro</span>
                     </>
                   ) : (
                     <>
-                      <Moon className="w-3.5 h-3.5 text-[#1456FF]" />
-                      <span className="hidden lg:inline">Modo Escuro</span>
+                      <Moon className="w-4 h-4 text-[#1860FC]" />
+                      <span className="hidden lg:inline">Escuro</span>
                     </>
                   )}
                 </button>
 
-                {currentUser ? (
-                  <div className="flex items-center gap-2">
-                    <div
-                      title={currentUser.displayName || currentUser.email || ''}
-                      className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-[#F4F6FB] dark:bg-[#192034] rounded-full border border-slate-200 dark:border-[#242F48] max-w-[150px]"
-                    >
-                      <span className="w-5 h-5 rounded-full bg-[#1456FF] text-[#E2FF1A] flex items-center justify-center text-[10px] font-black shrink-0 uppercase">
-                        {(currentUser.displayName?.[0] || currentUser.email?.[0] || 'U')}
-                      </span>
-                      <span className="truncate">{currentUser.displayName || currentUser.email}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleSignOut}
-                      title="Sair da conta e voltar ao login"
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-[#F4F6FB] dark:bg-[#192034] rounded-full hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400 transition-colors whitespace-nowrap"
-                    >
-                      <LogOut className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Sair</span>
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleSignOut}
-                    title="Encerrar modo convidado e ir para login"
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-[#F4F6FB] dark:bg-[#192034] border border-slate-200 dark:border-[#242F48] rounded-full hover:border-[#1456FF] transition-colors whitespace-nowrap"
-                  >
-                    <LogOut className="w-3.5 h-3.5 text-[#1456FF] dark:text-[#E2FF1A]" />
-                    <span className="hidden lg:inline">Convidado · Sair</span>
-                    <span className="lg:hidden">Sair</span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  title="Encerrar sessão e voltar ao login"
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-[#F8FAFC] dark:bg-[#192034] border border-slate-200 dark:border-[#242F48] rounded-full hover:border-rose-500 hover:text-rose-600 dark:hover:text-rose-400 transition-colors whitespace-nowrap cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span className="hidden lg:inline">Sair</span>
+                </button>
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setEditingTransaction(null);
-                    setModalDefaultType('expense');
-                    setIsModalOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-extrabold text-white bg-[#1456FF] rounded-full hover:bg-[#0E43D6] transition-colors whitespace-nowrap shrink-0 shadow-xs"
+                  onClick={() => openGlobalQuickAdd('expense', 'quick')}
+                  className="hidden md:inline-flex items-center gap-1.5 px-4 py-2 text-xs font-extrabold text-white bg-[#1860FC] rounded-full hover:bg-[#0D48D9] transition-colors whitespace-nowrap shrink-0 shadow-xs cursor-pointer"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Novo Lançamento</span>
-                  <span className="sm:hidden">Lançar</span>
+                  <Plus className="w-3.5 h-3.5 text-[#D4F907]" />
+                  <span>Novo Lançamento</span>
                 </button>
               </div>
             </div>
@@ -907,30 +1110,50 @@ export default function App() {
           {/* Offline Connectivity Indicator */}
           <OfflineIndicator />
 
-          {/* Floating Non-Displacing Toast Feedback Banner */}
+          {/* Floating Non-Displacing Toast Feedback Banner (With Undo Option for 1-Click) */}
           {toastMessage && (
-            <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4 pointer-events-none">
+            <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 w-full max-w-lg px-4 pointer-events-none">
               <div
                 role="status"
-                className="pointer-events-auto flex items-center justify-between px-4 py-2 bg-[#1456FF] text-white text-xs font-bold rounded-full shadow-lg border border-white/20"
+                className="pointer-events-auto flex items-center justify-between gap-2 px-4 py-2.5 bg-[#1860FC] text-white text-xs font-bold rounded-full shadow-lg border border-white/20"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <CheckCircle2 className="w-4 h-4 text-[#E2FF1A] shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 text-[#D4F907] shrink-0" />
                   <span className="truncate">{toastMessage}</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setToastMessage(null)}
-                  className="text-white/80 hover:text-white ml-3 font-extrabold shrink-0"
-                >
-                  Fechar
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  {undoTxId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const targetId = undoTxId;
+                        setToastMessage(null);
+                        setUndoTxId(null);
+                        handleDeleteTransaction(targetId);
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#D4F907] text-[#000000] text-[11px] font-black hover:bg-[#C0E206] transition-colors cursor-pointer"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      Desfazer
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setToastMessage(null);
+                      setUndoTxId(null);
+                    }}
+                    className="text-white/80 hover:text-white font-extrabold cursor-pointer"
+                  >
+                    Fechar
+                  </button>
+                </div>
               </div>
             </div>
           )}
 
-          {/* Main Workspace Container with In-Page Filtering */}
-          <main className="flex-1 min-h-0 max-w-7xl w-full mx-auto px-4 sm:px-6 py-3 overflow-y-auto overflow-x-hidden">
+          {/* Main Workspace Container with generous mobile spacing and pb-28 so Bottom Bar never overlaps content */}
+          <main className="flex-1 min-h-0 max-w-7xl w-full mx-auto px-4 sm:px-6 pt-4 sm:pt-5 pb-28 md:pb-8 overflow-y-auto overflow-x-hidden">
             {/* In-Page Filter Bar: Standard Months, All-Time & Custom Date/Nature/Category Filter */}
             <PageFilterBar
               criteria={filterCriteria}
@@ -940,80 +1163,42 @@ export default function App() {
               totalFilteredCount={filteredTransactions.length}
             />
 
-            {activeTab === 'overview' && (
+            {/* PÁGINA 1: 🏠 Visão Geral (dashboard) */}
+            {activeTab === 'dashboard' && (
               <OverviewTab
                 transactions={transactions}
                 categories={categories}
                 activeMonth={activeMonth}
                 monthlyPlan={activePlan}
                 onQuickLaunchPreset={handleQuickLaunchPreset}
-                onOpenNewModal={(defaultType = 'expense') => {
-                  setEditingTransaction(null);
-                  setModalDefaultType(defaultType);
-                  setIsModalOpen(true);
+                onOpenNewModal={(defaultType = 'expense', initialTab = 'quick') => {
+                  openGlobalQuickAdd(defaultType, initialTab);
                 }}
                 onEditTransaction={(tx) => {
                   setEditingTransaction(tx);
-                  setIsModalOpen(true);
+                  setIsQuickAddOpen(true);
                 }}
                 onDeleteTransaction={handleDeleteTransaction}
                 onNavigateTab={setActiveTab}
+                onFilterByCategory={handleFilterExtratoByCategory}
                 filteredTransactions={filteredTransactions}
                 summary={filteredSummary}
                 periodLabel={activePeriodLabel}
-              />
-            )}
-
-            {activeTab === 'quick_launch' && (
-              <QuickLaunchTab
-                transactions={transactions}
-                categories={categories}
-                activeMonth={activeMonth}
-                monthlyPlan={activePlan}
-                onQuickLaunchPreset={handleQuickLaunchPreset}
-                onOpenNewModal={(defaultType = 'expense') => {
-                  setEditingTransaction(null);
-                  setModalDefaultType(defaultType);
-                  setIsModalOpen(true);
+                isPrivacyMode={isPrivacyMode}
+                isPredictiveEnabled={isPredictiveEnabled}
+                onTogglePredictive={(enabled) => {
+                  setIsPredictiveEnabled(enabled);
+                  showToast(
+                    enabled
+                      ? 'Inteligência Preditiva de Sobras ativada!'
+                      : 'Inteligência Preditiva ocultada. Você pode reativá-la em Ajustes & Categorias.'
+                  );
                 }}
-                onDeleteTransaction={handleDeleteTransaction}
-                onNavigateTab={setActiveTab}
-                periodLabel={activePeriodLabel}
               />
             )}
 
-            {activeTab === 'transactions' && (
-              <TransactionsTab
-                transactions={transactions}
-                categories={categories}
-                activeMonth={activeMonth}
-                onOpenNewModal={(defaultType = 'expense') => {
-                  setEditingTransaction(null);
-                  setModalDefaultType(defaultType);
-                  setIsModalOpen(true);
-                }}
-                onEditTransaction={(tx) => {
-                  setEditingTransaction(tx);
-                  setIsModalOpen(true);
-                }}
-                onDeleteTransaction={handleDeleteTransaction}
-                filteredTransactions={filteredTransactions}
-                periodLabel={activePeriodLabel}
-                globalSearchQuery={navbarSearchQuery}
-                onChangeGlobalSearchQuery={handleNavbarSearchChange}
-              />
-            )}
-
-            {activeTab === 'categories' && (
-              <CategoriesTab
-                categories={categories}
-                onCreateCategory={handleCreateCategory}
-                onDeleteCategory={handleDeleteCategory}
-                onQuickLaunchPreset={handleQuickLaunchPreset}
-              />
-            )}
-
-            {activeTab === 'analysis' && (
+            {/* PÁGINA 2: 🎯 Planejador & Metas (planner) */}
+            {activeTab === 'planner' && (
               <MonthlyAnalysisTab
                 transactions={transactions}
                 categories={categories}
@@ -1023,135 +1208,210 @@ export default function App() {
                 onRecordSurplusAllocation={handleRecordSurplusAllocation}
                 filteredTransactions={filteredTransactions}
                 periodLabel={activePeriodLabel}
+                isPrivacyMode={isPrivacyMode}
+                isPredictiveEnabled={isPredictiveEnabled}
+                onTogglePredictive={(enabled) => {
+                  setIsPredictiveEnabled(enabled);
+                  showToast(
+                    enabled
+                      ? 'Inteligência Preditiva de Sobras ativada!'
+                      : 'Inteligência Preditiva ocultada. Você pode reativá-la em Ajustes & Categorias.'
+                  );
+                }}
+              />
+            )}
+
+            {/* PÁGINA 3: 💳 Extrato (transactions) */}
+            {activeTab === 'transactions' && (
+              <TransactionsTab
+                transactions={transactions}
+                categories={categories}
+                activeMonth={activeMonth}
+                onOpenNewModal={(defaultType = 'expense', initialTab = 'detailed') => {
+                  openGlobalQuickAdd(defaultType, initialTab);
+                }}
+                onEditTransaction={(tx) => {
+                  setEditingTransaction(tx);
+                  setIsQuickAddOpen(true);
+                }}
+                onDeleteTransaction={handleDeleteTransaction}
+                onToggleTransactionStatus={handleToggleTransactionStatus}
+                filteredTransactions={filteredTransactions}
+                periodLabel={activePeriodLabel}
+                globalSearchQuery={navbarSearchQuery}
+                onChangeGlobalSearchQuery={handleNavbarSearchChange}
+                externalCategoryFilter={filterCriteria.categoryId}
+                onChangeExternalCategoryFilter={(catId) =>
+                  setFilterCriteria((prev) => ({ ...prev, categoryId: catId }))
+                }
+                isPrivacyMode={isPrivacyMode}
+              />
+            )}
+
+            {/* PÁGINA 4: 🏷️ Ajustes & Categorias (settings) */}
+            {activeTab === 'settings' && (
+              <CategoriesTab
+                categories={categories}
+                onCreateCategory={handleCreateCategory}
+                onUpdateCategory={handleUpdateCategory}
+                onDeleteCategory={handleDeleteCategory}
+                onQuickLaunchPreset={handleQuickLaunchPreset}
+                theme={theme}
+                onToggleTheme={toggleTheme}
+                currentUser={currentUser}
+                onSignOut={handleSignOut}
+                isPredictiveEnabled={isPredictiveEnabled}
+                onTogglePredictive={(enabled) => {
+                  setIsPredictiveEnabled(enabled);
+                  showToast(
+                    enabled
+                      ? 'Inteligência Preditiva de Sobras ativada!'
+                      : 'Inteligência Preditiva de Sobras desativada.'
+                  );
+                }}
+                isPrivacyMode={isPrivacyMode}
+                onTogglePrivacyMode={togglePrivacyMode}
               />
             )}
           </main>
 
-          {/* Bottom Navigation Bar: Visible ONLY on mobile screens (md:hidden) */}
+          {/* Mobile Fixed Bottom Navigation Bar (4 Abas + Botão Flutuante Central FAB "+") */}
           <nav
-            aria-label="Navegação Principal Inferior"
-            className="md:hidden shrink-0 bg-white dark:bg-[#111624] border-t border-slate-200/80 dark:border-[#1E273C] px-4 py-1.5 z-30 transition-colors"
+            aria-label="Navegação Principal Inferior Mobile"
+            className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-[#111624]/95 backdrop-blur-md border-t border-slate-200/80 dark:border-[#1E273C] px-3 py-2 z-40 transition-colors shadow-lg"
           >
-          <div className="max-w-xl mx-auto grid grid-cols-4 gap-2">
-            {/* Botão 1: Visão Geral */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('overview')}
-              className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2 rounded-2xl transition-colors ${
-                activeTab === 'overview'
-                  ? 'bg-[#1456FF] text-white font-extrabold shadow-xs'
-                  : 'text-slate-500 dark:text-slate-400 hover:bg-[#F4F6FB] dark:hover:bg-[#192034] hover:text-[#0A0E17] dark:hover:text-white font-semibold'
-              }`}
-            >
-              <LayoutGrid
-                className={`w-4 h-4 shrink-0 ${
-                  activeTab === 'overview' ? 'text-[#E2FF1A]' : 'text-[#1456FF] dark:text-[#E2FF1A]'
+            <div className="max-w-md mx-auto grid grid-cols-5 items-center gap-1.5">
+              {/* Aba 1: Visão Geral */}
+              <button
+                type="button"
+                onClick={() => setActiveTab('dashboard')}
+                className={`flex flex-col items-center justify-center gap-1 py-2 px-1.5 rounded-2xl transition-colors cursor-pointer ${
+                  activeTab === 'dashboard'
+                    ? 'bg-[#1860FC] text-white font-extrabold shadow-xs'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white font-semibold'
                 }`}
-              />
-              <span className="text-[11px] leading-none truncate">Visão Geral</span>
-            </button>
+              >
+                <LayoutGrid
+                  className={`w-4 h-4 shrink-0 ${
+                    activeTab === 'dashboard'
+                      ? 'text-[#D4F907]'
+                      : 'text-[#1860FC] dark:text-[#D4F907]'
+                  }`}
+                />
+                <span className="text-[10px] leading-none truncate">Visão Geral</span>
+              </button>
 
-            {/* Botão 2: Gastos Padrões */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('quick_launch')}
-              className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2 rounded-2xl transition-colors ${
-                activeTab === 'quick_launch'
-                  ? 'bg-[#1456FF] text-white font-extrabold shadow-xs'
-                  : 'text-slate-500 dark:text-slate-400 hover:bg-[#F4F6FB] dark:hover:bg-[#192034] hover:text-[#0A0E17] dark:hover:text-white font-semibold'
-              }`}
-            >
-              <Zap
-                className={`w-4 h-4 shrink-0 ${
-                  activeTab === 'quick_launch' ? 'text-[#E2FF1A]' : 'text-[#1456FF] dark:text-[#E2FF1A]'
+              {/* Aba 2: Planejador & Metas */}
+              <button
+                type="button"
+                onClick={() => setActiveTab('planner')}
+                className={`flex flex-col items-center justify-center gap-1 py-2 px-1.5 rounded-2xl transition-colors cursor-pointer ${
+                  activeTab === 'planner'
+                    ? 'bg-[#1860FC] text-white font-extrabold shadow-xs'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white font-semibold'
                 }`}
-              />
-              <span className="text-[11px] leading-none truncate">Gastos Padrões</span>
-            </button>
+              >
+                <Compass
+                  className={`w-4 h-4 shrink-0 ${
+                    activeTab === 'planner'
+                      ? 'text-[#D4F907]'
+                      : 'text-[#1860FC] dark:text-[#D4F907]'
+                  }`}
+                />
+                <span className="text-[10px] leading-none truncate">Planejador</span>
+              </button>
 
-            {/* Botão 3: Entradas e Saídas */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('transactions')}
-              className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2 rounded-2xl transition-colors ${
-                activeTab === 'transactions'
-                  ? 'bg-[#1456FF] text-white font-extrabold shadow-xs'
-                  : 'text-slate-500 dark:text-slate-400 hover:bg-[#F4F6FB] dark:hover:bg-[#192034] hover:text-[#0A0E17] dark:hover:text-white font-semibold'
-              }`}
-            >
-              <ArrowLeftRight
-                className={`w-4 h-4 shrink-0 ${
-                  activeTab === 'transactions' ? 'text-[#E2FF1A]' : 'text-[#1456FF] dark:text-[#E2FF1A]'
+              {/* Botão Flutuante Central (FAB "+") para Lançamento Rápido Global */}
+              <div className="flex items-center justify-center -mt-6">
+                <button
+                  type="button"
+                  onClick={() => openGlobalQuickAdd('expense', 'quick')}
+                  aria-label="Abrir Modal Global de Lançamento Rápido"
+                  className="w-12 h-12 rounded-full bg-[#1860FC] hover:bg-[#0D48D9] text-[#D4F907] border-4 border-[#F8FAFC] dark:border-[#000000] shadow-lg flex items-center justify-center transition-transform active:scale-95 cursor-pointer"
+                >
+                  <Plus className="w-6 h-6 stroke-[2.75]" />
+                </button>
+              </div>
+
+              {/* Aba 3: Extrato */}
+              <button
+                type="button"
+                onClick={() => setActiveTab('transactions')}
+                className={`flex flex-col items-center justify-center gap-1 py-2 px-1.5 rounded-2xl transition-colors cursor-pointer ${
+                  activeTab === 'transactions'
+                    ? 'bg-[#1860FC] text-white font-extrabold shadow-xs'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white font-semibold'
                 }`}
-              />
-              <span className="text-[11px] leading-none truncate">Entradas e Saídas</span>
-            </button>
+              >
+                <ArrowLeftRight
+                  className={`w-4 h-4 shrink-0 ${
+                    activeTab === 'transactions'
+                      ? 'text-[#D4F907]'
+                      : 'text-[#1860FC] dark:text-[#D4F907]'
+                  }`}
+                />
+                <span className="text-[10px] leading-none truncate">Extrato</span>
+              </button>
 
-            {/* Botão 4: Aba Lateral */}
-            <button
-              type="button"
-              onClick={() => setIsSidebarOpen(true)}
-              aria-label="Abrir aba lateral com o restante dos recursos"
-              className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2 rounded-2xl transition-colors ${
-                isSidebarOpen || activeTab === 'categories' || activeTab === 'analysis'
-                  ? 'bg-[#1456FF] text-white font-extrabold shadow-xs'
-                  : 'text-slate-500 dark:text-slate-400 hover:bg-[#F4F6FB] dark:hover:bg-[#192034] hover:text-[#0A0E17] dark:hover:text-white font-semibold'
-              }`}
-            >
-              <Menu
-                className={`w-4 h-4 shrink-0 ${
-                  isSidebarOpen || activeTab === 'categories' || activeTab === 'analysis'
-                    ? 'text-[#E2FF1A]'
-                    : 'text-[#1456FF] dark:text-[#E2FF1A]'
+              {/* Aba 4: Ajustes & Categorias */}
+              <button
+                type="button"
+                onClick={() => setActiveTab('settings')}
+                className={`flex flex-col items-center justify-center gap-1 py-2 px-1.5 rounded-2xl transition-colors cursor-pointer ${
+                  activeTab === 'settings'
+                    ? 'bg-[#1860FC] text-white font-extrabold shadow-xs'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white font-semibold'
                 }`}
-              />
-              <span className="text-[11px] leading-none truncate">
-                {activeTab === 'categories'
-                  ? 'Tipos de Gastos'
-                  : activeTab === 'analysis'
-                  ? 'Análise & Sobras'
-                  : 'Aba Lateral'}
-              </span>
-            </button>
-          </div>
-        </nav>
+              >
+                <SlidersHorizontal
+                  className={`w-4 h-4 shrink-0 ${
+                    activeTab === 'settings'
+                      ? 'text-[#D4F907]'
+                      : 'text-[#1860FC] dark:text-[#D4F907]'
+                  }`}
+                />
+                <span className="text-[10px] leading-none truncate">Ajustes</span>
+              </button>
+            </div>
+          </nav>
 
-        {/* Lateral Drawer ("Aba Lateral" acessada pelo 4º botão) */}
-        <SidebarDrawer
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
-          activeTab={activeTab}
-          onSelectTab={setActiveTab}
-          activeMonth={activeMonth}
-          onChangeMonth={setActiveMonth}
-          theme={theme}
-          onToggleTheme={toggleTheme}
-          currentUser={currentUser}
-          onGoogleSignIn={handleGoogleSignIn}
-          onSignOut={handleSignOut}
-          onOpenNewModal={(defaultType = 'expense') => {
-            setEditingTransaction(null);
-            setModalDefaultType(defaultType);
-            setIsModalOpen(true);
-          }}
-          categoriesCount={categories.length}
-          transactionsCount={filteredTransactions.length}
-          netSurplusCents={filteredSummary.netSurplusCents}
-        />
+          {/* Optional Drawer */}
+          <SidebarDrawer
+            isOpen={isSidebarOpen}
+            onClose={() => setIsSidebarOpen(false)}
+            activeTab={activeTab}
+            onSelectTab={setActiveTab}
+            activeMonth={activeMonth}
+            onChangeMonth={setActiveMonth}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            currentUser={currentUser}
+            onGoogleSignIn={handleGoogleSignIn}
+            onSignOut={handleSignOut}
+            onOpenNewModal={(defaultType = 'expense', initialTab = 'quick') => {
+              openGlobalQuickAdd(defaultType, initialTab);
+            }}
+            categoriesCount={categories.length}
+            transactionsCount={filteredTransactions.length}
+            netSurplusCents={filteredSummary.netSurplusCents}
+          />
 
-        {/* Transaction Modal */}
-        <TransactionModal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setEditingTransaction(null);
-          }}
-          onSave={handleSaveTransaction}
-          categories={categories}
-          activeMonth={activeMonth}
-          initialTransaction={editingTransaction}
-          defaultType={modalDefaultType}
-        />
+          {/* COMPONENTE GLOBAL: Modal / Gaveta de Lançamento Rápido (Botão "+") */}
+          <TransactionModal
+            isOpen={isQuickAddOpen}
+            onClose={() => {
+              setIsQuickAddOpen(false);
+              setEditingTransaction(null);
+            }}
+            onSave={handleSaveTransaction}
+            onQuickLaunchPreset={handleQuickLaunchPreset}
+            onNavigateToSettings={() => setActiveTab('settings')}
+            categories={categories}
+            activeMonth={activeMonth}
+            initialTransaction={editingTransaction}
+            defaultType={modalDefaultType}
+            initialModalTab={quickAddInitialTab}
+          />
         </div>
       </div>
     </ErrorBoundary>

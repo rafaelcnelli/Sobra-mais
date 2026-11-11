@@ -258,14 +258,19 @@ export function AuthPage({
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#F4F6FB] dark:bg-[#080B12] text-[#0A0E17] dark:text-white flex flex-col justify-between transition-colors duration-200">
+    <div className="min-h-screen w-full bg-[#F8FAFC] dark:bg-[#000000] text-[#000000] dark:text-white flex flex-col justify-between transition-colors duration-200">
       {/* Top Bar: Brand, PWA Install & Theme Toggle */}
       <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img
             src="./logo-sobramais.png"
             alt="SobraMais"
-            className="h-10 sm:h-11 w-auto object-contain rounded-xl bg-[#F6F8FC] px-2 py-1 shadow-xs border border-slate-200/70"
+            className="h-10 sm:h-11 w-auto object-contain dark:hidden"
+          />
+          <img
+            src="./logo-sobramais-dark.png"
+            alt="SobraMais"
+            className="h-10 sm:h-11 w-auto object-contain hidden dark:block"
           />
           <span className="hidden md:inline text-xs font-medium text-slate-400 dark:text-slate-500">
             · Controle Financeiro & Gestão de Sobras
@@ -278,16 +283,16 @@ export function AuthPage({
             type="button"
             onClick={onToggleTheme}
             aria-label={theme === 'dark' ? 'Ativar Modo Claro' : 'Ativar Modo Escuro'}
-            className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-full border border-slate-200 dark:border-[#242F48] bg-white dark:bg-[#111624] text-[#0A0E17] dark:text-white hover:border-[#1456FF] dark:hover:border-[#E2FF1A] transition-colors shadow-xs"
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-full border border-slate-200 dark:border-[#242F48] bg-white dark:bg-[#111624] text-[#000000] dark:text-white hover:border-[#1860FC] dark:hover:border-[#D4F907] transition-colors shadow-xs"
           >
             {theme === 'dark' ? (
               <>
-                <Sun className="w-4 h-4 text-[#E2FF1A]" />
+                <Sun className="w-4 h-4 text-[#D4F907]" />
                 <span className="hidden sm:inline">Modo Claro</span>
               </>
             ) : (
               <>
-                <Moon className="w-4 h-4 text-[#1456FF]" />
+                <Moon className="w-4 h-4 text-[#1860FC]" />
                 <span className="hidden sm:inline">Modo Escuro</span>
               </>
             )}
@@ -300,13 +305,13 @@ export function AuthPage({
         <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           {/* Left Column: Visual Value Proposition & Brand Pitch */}
           <div className="lg:col-span-6 space-y-6 text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1456FF]/10 dark:bg-[#1456FF]/20 border border-[#1456FF]/20 text-[#1456FF] dark:text-[#E2FF1A] text-xs font-extrabold tracking-wide uppercase">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1860FC]/10 dark:bg-[#1860FC]/20 border border-[#1860FC]/20 text-[#1860FC] dark:text-[#D4F907] text-xs font-extrabold tracking-wide uppercase">
               <Sparkles className="w-3.5 h-3.5" />
               Gestão Financeira com Foco em Sobras
             </div>
 
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black font-display tracking-tight text-[#0A0E17] dark:text-white leading-tight">
-              Transforme seus ganhos em <span className="text-[#1456FF] dark:text-[#E2FF1A]">patrimônio real</span> e sobras previsíveis.
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black font-display tracking-tight text-[#000000] dark:text-white leading-tight">
+              Transforme seus ganhos em <span className="text-[#1860FC] dark:text-[#D4F907]">patrimônio real</span> e sobras previsíveis.
             </h1>
 
             <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl">
@@ -316,11 +321,11 @@ export function AuthPage({
             {/* 3 Pillars of SobraMais */}
             <div className="space-y-3 pt-2">
               <div className="flex items-start gap-3 p-3 rounded-2xl bg-white dark:bg-[#111624] border border-slate-200/80 dark:border-[#1E273C] shadow-xs">
-                <span className="w-8 h-8 rounded-xl bg-[#1456FF] text-white flex items-center justify-center shrink-0">
+                <span className="w-8 h-8 rounded-xl bg-[#1860FC] text-white flex items-center justify-center shrink-0">
                   <PieChart className="w-4 h-4" />
                 </span>
                 <div className="min-w-0">
-                  <h2 className="text-xs sm:text-sm font-extrabold text-[#0A0E17] dark:text-white">
+                  <h2 className="text-xs sm:text-sm font-extrabold text-[#000000] dark:text-white">
                     Entradas, Saídas e Tetos por Categoria
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -330,11 +335,11 @@ export function AuthPage({
               </div>
 
               <div className="flex items-start gap-3 p-3 rounded-2xl bg-white dark:bg-[#111624] border border-slate-200/80 dark:border-[#1E273C] shadow-xs">
-                <span className="w-8 h-8 rounded-xl bg-[#1456FF] text-[#E2FF1A] flex items-center justify-center shrink-0">
+                <span className="w-8 h-8 rounded-xl bg-[#1860FC] text-[#D4F907] flex items-center justify-center shrink-0">
                   <TrendingUp className="w-4 h-4" />
                 </span>
                 <div className="min-w-0">
-                  <h2 className="text-xs sm:text-sm font-extrabold text-[#0A0E17] dark:text-white">
+                  <h2 className="text-xs sm:text-sm font-extrabold text-[#000000] dark:text-white">
                     Planejador Inteligente de Sobras Líquidas
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -344,11 +349,11 @@ export function AuthPage({
               </div>
 
               <div className="flex items-start gap-3 p-3 rounded-2xl bg-white dark:bg-[#111624] border border-slate-200/80 dark:border-[#1E273C] shadow-xs">
-                <span className="w-8 h-8 rounded-xl bg-[#E2FF1A] text-[#0A0E17] flex items-center justify-center shrink-0">
+                <span className="w-8 h-8 rounded-xl bg-[#D4F907] text-[#000000] flex items-center justify-center shrink-0">
                   <Zap className="w-4 h-4" />
                 </span>
                 <div className="min-w-0">
-                  <h2 className="text-xs sm:text-sm font-extrabold text-[#0A0E17] dark:text-white">
+                  <h2 className="text-xs sm:text-sm font-extrabold text-[#000000] dark:text-white">
                     Lançamentos Rápidos de 1-Clique
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -369,7 +374,7 @@ export function AuthPage({
           <div className="lg:col-span-6 w-full max-w-md mx-auto">
             <div className="bg-white dark:bg-[#111624] border border-slate-200/80 dark:border-[#1E273C] rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
               {/* Card Header & Switch Tabs */}
-              <div className="flex items-center p-1 bg-[#F4F6FB] dark:bg-[#080B12] rounded-2xl mb-6">
+              <div className="flex items-center p-1 bg-[#F8FAFC] dark:bg-[#000000] rounded-2xl mb-6">
                 <button
                   type="button"
                   onClick={() => {
@@ -379,8 +384,8 @@ export function AuthPage({
                   }}
                   className={`flex-1 py-2 text-xs sm:text-sm font-extrabold rounded-xl transition-all ${
                     authMode === 'login'
-                      ? 'bg-[#1456FF] text-white shadow-xs'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-[#0A0E17] dark:hover:text-white'
+                      ? 'bg-[#1860FC] text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white'
                   }`}
                 >
                   Entrar
@@ -394,8 +399,8 @@ export function AuthPage({
                   }}
                   className={`flex-1 py-2 text-xs sm:text-sm font-extrabold rounded-xl transition-all ${
                     authMode === 'register'
-                      ? 'bg-[#1456FF] text-white shadow-xs'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-[#0A0E17] dark:hover:text-white'
+                      ? 'bg-[#1860FC] text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white'
                   }`}
                 >
                   Criar Conta
@@ -404,7 +409,7 @@ export function AuthPage({
 
               {/* Title inside card */}
               <div className="mb-5">
-                <h2 className="text-xl font-black font-display text-[#0A0E17] dark:text-white">
+                <h2 className="text-xl font-black font-display text-[#000000] dark:text-white">
                   {authMode === 'login' ? 'Acesse sua Conta' : 'Crie sua Conta Gratuita'}
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -418,7 +423,7 @@ export function AuthPage({
               {errorMessage && (
                 <div
                   role="alert"
-                  className="mb-4 p-3 rounded-2xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs flex items-start gap-2 animate-in fade-in duration-150"
+                  className="mb-4 p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2 animate-in fade-in duration-150"
                 >
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                   <span className="leading-snug">{errorMessage}</span>
@@ -440,7 +445,7 @@ export function AuthPage({
                 type="button"
                 onClick={handleGoogleAuth}
                 disabled={isLoading}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-2xl border border-slate-200 dark:border-[#242F48] bg-white dark:bg-[#181F32] hover:bg-slate-50 dark:hover:bg-[#202942] text-[#0A0E17] dark:text-white text-xs sm:text-sm font-bold transition-all shadow-xs disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-2xl border border-slate-200 dark:border-[#242F48] bg-white dark:bg-[#111624] hover:bg-slate-50 dark:hover:bg-[#1A2236] text-[#000000] dark:text-white text-xs sm:text-sm font-bold transition-all shadow-xs disabled:opacity-50"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path
@@ -491,7 +496,7 @@ export function AuthPage({
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Ex: João da Silva"
-                        className="w-full pl-9 pr-3 py-2.5 text-xs sm:text-sm bg-[#F4F6FB] dark:bg-[#181F32] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#0A0E17] dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#1456FF] transition-colors"
+                        className="w-full pl-9 pr-3 py-2.5 text-xs sm:text-sm bg-[#F8FAFC] dark:bg-[#181F32] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#000000] dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#1860FC] transition-colors"
                       />
                     </div>
                   </div>
@@ -511,7 +516,7 @@ export function AuthPage({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="seu.email@exemplo.com"
-                      className="w-full pl-9 pr-3 py-2.5 text-xs sm:text-sm bg-[#F4F6FB] dark:bg-[#181F32] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#0A0E17] dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#1456FF] transition-colors"
+                      className="w-full pl-9 pr-3 py-2.5 text-xs sm:text-sm bg-[#F8FAFC] dark:bg-[#181F32] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#000000] dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#1860FC] transition-colors"
                     />
                   </div>
                 </div>
@@ -526,7 +531,7 @@ export function AuthPage({
                       <button
                         type="button"
                         onClick={handleForgotPassword}
-                        className="text-[11px] font-bold text-[#1456FF] dark:text-[#E2FF1A] hover:underline"
+                        className="text-[11px] font-bold text-[#1860FC] dark:text-[#D4F907] hover:underline"
                       >
                         Esqueceu a senha?
                       </button>
@@ -541,13 +546,13 @@ export function AuthPage({
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder={authMode === 'login' ? '••••••••' : 'Mínimo de 6 caracteres'}
-                      className="w-full pl-9 pr-10 py-2.5 text-xs sm:text-sm bg-[#F4F6FB] dark:bg-[#181F32] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#0A0E17] dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#1456FF] transition-colors"
+                      className="w-full pl-9 pr-10 py-2.5 text-xs sm:text-sm bg-[#F8FAFC] dark:bg-[#181F32] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#000000] dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#1860FC] transition-colors"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       aria-label={showPassword ? 'Ocultar senha' : 'Exibir senha'}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0A0E17] dark:hover:text-white"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#000000] dark:hover:text-white"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -569,7 +574,7 @@ export function AuthPage({
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="Repita sua senha"
-                        className="w-full pl-9 pr-3 py-2.5 text-xs sm:text-sm bg-[#F4F6FB] dark:bg-[#181F32] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#0A0E17] dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#1456FF] transition-colors"
+                        className="w-full pl-9 pr-3 py-2.5 text-xs sm:text-sm bg-[#F8FAFC] dark:bg-[#181F32] border border-slate-200 dark:border-[#242F48] rounded-xl text-[#000000] dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#1860FC] transition-colors"
                       />
                     </div>
                   </div>
@@ -583,7 +588,7 @@ export function AuthPage({
                       id="terms-check"
                       checked={agreeTerms}
                       onChange={(e) => setAgreeTerms(e.target.checked)}
-                      className="mt-0.5 rounded border-slate-300 text-[#1456FF] focus:ring-[#1456FF]"
+                      className="mt-0.5 rounded border-slate-300 text-[#1860FC] focus:ring-[#1860FC]"
                     />
                     <label htmlFor="terms-check" className="text-[11px] text-slate-500 dark:text-slate-400">
                       Concordo com os Termos de Uso e com a Política de Proteção de Dados Financeiros Pessoais.
@@ -595,19 +600,19 @@ export function AuthPage({
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full flex items-center justify-center gap-2 px-5 py-3 text-xs sm:text-sm font-extrabold text-white bg-[#1456FF] hover:bg-[#0E43D6] rounded-2xl transition-all shadow-md disabled:opacity-50 mt-2"
+                  className="w-full flex items-center justify-center gap-2 px-5 py-3 text-xs sm:text-sm font-extrabold text-white bg-[#1860FC] hover:bg-[#0D48D9] rounded-2xl transition-all shadow-md disabled:opacity-50 mt-2"
                 >
                   {isLoading ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : authMode === 'login' ? (
                     <>
                       <span>Entrar no SobraMais</span>
-                      <ArrowRight className="w-4 h-4 text-[#E2FF1A]" />
+                      <ArrowRight className="w-4 h-4 text-[#D4F907]" />
                     </>
                   ) : (
                     <>
                       <span>Criar Conta e Acessar</span>
-                      <ArrowRight className="w-4 h-4 text-[#E2FF1A]" />
+                      <ArrowRight className="w-4 h-4 text-[#D4F907]" />
                     </>
                   )}
                 </button>
@@ -625,7 +630,7 @@ export function AuthPage({
                         setErrorMessage(null);
                         setInfoMessage(null);
                       }}
-                      className="font-extrabold text-[#1456FF] dark:text-[#E2FF1A] hover:underline"
+                      className="font-extrabold text-[#1860FC] dark:text-[#D4F907] hover:underline"
                     >
                       Criar conta gratuita
                     </button>
@@ -640,7 +645,7 @@ export function AuthPage({
                         setErrorMessage(null);
                         setInfoMessage(null);
                       }}
-                      className="font-extrabold text-[#1456FF] dark:text-[#E2FF1A] hover:underline"
+                      className="font-extrabold text-[#1860FC] dark:text-[#D4F907] hover:underline"
                     >
                       Fazer login
                     </button>
@@ -648,16 +653,20 @@ export function AuthPage({
                 )}
               </div>
 
-              {/* Mode Convidado (Guest Access) */}
-              <div className="mt-4 pt-4 border-t border-slate-200/80 dark:border-[#242F48] text-center">
+              {/* Modo de Demonstração Rápida (1-Clique) em Destaque */}
+              <div className="mt-5 pt-4 border-t border-slate-200/80 dark:border-[#242F48]">
                 <button
                   type="button"
                   onClick={() => onEnterGuestMode()}
-                  className="text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-[#1456FF] dark:hover:text-[#E2FF1A] transition-colors inline-flex items-center gap-1.5"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#D4F907] hover:bg-[#C0E206] text-[#000000] text-xs sm:text-sm font-black transition-all shadow-sm cursor-pointer"
                 >
-                  <span>Experimentar sem conta (Modo Convidado)</span>
-                  <span aria-hidden="true">→</span>
+                  <Zap className="w-4 h-4 fill-current shrink-0" />
+                  <span>Modo de Demonstração Rápida (1-Clique)</span>
+                  <ArrowRight className="w-4 h-4 shrink-0" />
                 </button>
+                <p className="text-[11px] text-center text-slate-400 dark:text-slate-500 mt-1.5">
+                  Teste todos os recursos instantaneamente com dados de exemplo
+                </p>
               </div>
             </div>
           </div>

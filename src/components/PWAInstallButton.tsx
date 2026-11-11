@@ -43,9 +43,9 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ variant = 'n
           type="button"
           onClick={handleClick}
           title="Instalar aplicativo SobraMais no dispositivo"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-extrabold rounded-full bg-[#E2FF1A] text-[#0A0E17] hover:bg-[#d5f20d] transition-colors whitespace-nowrap shadow-xs cursor-pointer"
+          className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-extrabold rounded-full bg-[#D4F907] text-[#000000] hover:bg-[#C0E206] transition-colors whitespace-nowrap shadow-xs cursor-pointer"
         >
-          <Download className="w-3.5 h-3.5 shrink-0" />
+          <Download className="w-4 h-4 shrink-0" />
           <span className="hidden sm:inline">Instalar App</span>
           <span className="sm:hidden">App</span>
         </button>
@@ -55,13 +55,13 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ variant = 'n
         <button
           type="button"
           onClick={handleClick}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-extrabold bg-[#E2FF1A] text-[#0A0E17] hover:bg-[#d5f20d] transition-colors shadow-xs cursor-pointer"
+          className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-extrabold bg-[#D4F907] text-[#000000] hover:bg-[#C0E206] transition-colors shadow-xs cursor-pointer"
         >
           <div className="flex items-center gap-2">
             <Download className="w-4 h-4 shrink-0" />
             <span>Instalar App (PWA)</span>
           </div>
-          <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-[#0A0E17]/10">
+          <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-[#000000]/10">
             Grátis
           </span>
         </button>
@@ -71,13 +71,13 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ variant = 'n
         <button
           type="button"
           onClick={handleClick}
-          className="w-full flex items-center justify-between p-3.5 bg-[#E2FF1A] text-[#0A0E17] rounded-2xl text-xs font-extrabold hover:bg-[#d5f20d] transition-colors shadow-xs cursor-pointer"
+          className="w-full flex items-center justify-between p-3.5 bg-[#D4F907] text-[#000000] rounded-2xl text-xs font-extrabold hover:bg-[#C0E206] transition-colors shadow-xs cursor-pointer"
         >
           <div className="flex items-center gap-2.5">
             <Smartphone className="w-4 h-4 shrink-0" />
             <span>Instalar Aplicativo SobraMais</span>
           </div>
-          <span className="px-2.5 py-0.5 rounded-full bg-[#0A0E17] text-[#E2FF1A] text-[10px] font-black uppercase">
+          <span className="px-2.5 py-0.5 rounded-full bg-[#000000] text-[#D4F907] text-[10px] font-black uppercase">
             Instalar
           </span>
         </button>
@@ -87,7 +87,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ variant = 'n
         <button
           type="button"
           onClick={handleClick}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-extrabold rounded-full bg-[#E2FF1A] text-[#0A0E17] hover:bg-[#d5f20d] transition-colors shadow-xs cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-extrabold rounded-full bg-[#D4F907] text-[#000000] hover:bg-[#C0E206] transition-colors shadow-xs cursor-pointer"
         >
           <Download className="w-3.5 h-3.5 shrink-0" />
           <span>Instalar App</span>
@@ -101,13 +101,18 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ variant = 'n
           aria-label="Como instalar o aplicativo SobraMais"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
         >
-          <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#111624] border border-slate-200 dark:border-[#1E273C] p-5 sm:p-6 shadow-2xl text-[#0A0E17] dark:text-white space-y-4">
+          <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#111624] border border-slate-200 dark:border-[#1E273C] p-5 sm:p-6 shadow-2xl text-[#000000] dark:text-white space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
                 <img
                   src="./logo-icon.png"
                   alt="Ícone SobraMais"
-                  className="w-12 h-12 rounded-2xl border border-slate-200 dark:border-[#242F48] shadow-xs object-contain bg-[#F6F8FC]"
+                  className="w-12 h-12 object-contain dark:hidden"
+                />
+                <img
+                  src="./logo-icon-dark.png"
+                  alt="Ícone SobraMais"
+                  className="w-12 h-12 object-contain hidden dark:block"
                 />
                 <div>
                   <h3 className="text-base font-black font-display">
@@ -135,28 +140,28 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ variant = 'n
                   const ok = await install();
                   if (ok) setShowGuideModal(false);
                 }}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl bg-[#1456FF] hover:bg-[#0D44D9] text-white text-xs sm:text-sm font-extrabold shadow-sm transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl bg-[#1860FC] hover:bg-[#0D48D9] text-white text-xs sm:text-sm font-extrabold shadow-sm transition-colors"
               >
-                <Download className="w-4 h-4 text-[#E2FF1A]" />
+                <Download className="w-4 h-4 text-[#D4F907]" />
                 <span>Instalar Agora com 1 Clique</span>
               </button>
             )}
 
             <div className="space-y-2.5 text-xs">
               {isIOS ? (
-                <div className="p-3.5 rounded-2xl bg-[#F4F6FB] dark:bg-[#181F32] border border-slate-200/80 dark:border-[#242F48] space-y-2">
-                  <div className="font-extrabold text-[#1456FF] dark:text-[#E2FF1A] flex items-center gap-1.5">
+                <div className="p-3.5 rounded-2xl bg-[#F8FAFC] dark:bg-[#111624] border border-slate-200/80 dark:border-[#242F48] space-y-2">
+                  <div className="font-extrabold text-[#1860FC] dark:text-[#D4F907] flex items-center gap-1.5">
                     <Smartphone className="w-4 h-4" />
                     <span>Como instalar no iPhone / iPad (Safari):</span>
                   </div>
                   <ol className="list-decimal list-inside space-y-1.5 text-slate-600 dark:text-slate-300">
                     <li>
                       Toque no botão <strong>Compartilhar</strong>{' '}
-                      <Share className="w-3.5 h-3.5 inline text-[#1456FF] dark:text-[#E2FF1A]" /> na barra do Safari.
+                      <Share className="w-3.5 h-3.5 inline text-[#1860FC] dark:text-[#D4F907]" /> na barra do Safari.
                     </li>
                     <li>
                       Role as opções e toque em <strong>Adicionar à Tela de Início</strong>{' '}
-                      <PlusSquare className="w-3.5 h-3.5 inline text-[#1456FF] dark:text-[#E2FF1A]" />.
+                      <PlusSquare className="w-3.5 h-3.5 inline text-[#1860FC] dark:text-[#D4F907]" />.
                     </li>
                     <li>
                       Confirme tocando em <strong>Adicionar</strong> no canto superior direito.
@@ -165,8 +170,8 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ variant = 'n
                 </div>
               ) : (
                 <>
-                  <div className="p-3 rounded-2xl bg-[#F4F6FB] dark:bg-[#181F32] border border-slate-200/80 dark:border-[#242F48] space-y-1.5">
-                    <div className="font-extrabold text-[#1456FF] dark:text-[#E2FF1A] flex items-center gap-1.5">
+                  <div className="p-3 rounded-2xl bg-[#F8FAFC] dark:bg-[#111624] border border-slate-200/80 dark:border-[#242F48] space-y-1.5">
+                    <div className="font-extrabold text-[#1860FC] dark:text-[#D4F907] flex items-center gap-1.5">
                       <Smartphone className="w-4 h-4" />
                       <span>No Android (Chrome / Edge / Samsung):</span>
                     </div>
@@ -176,8 +181,8 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ variant = 'n
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-2xl bg-[#F4F6FB] dark:bg-[#181F32] border border-slate-200/80 dark:border-[#242F48] space-y-1.5">
-                    <div className="font-extrabold text-[#1456FF] dark:text-[#E2FF1A] flex items-center gap-1.5">
+                  <div className="p-3 rounded-2xl bg-[#F8FAFC] dark:bg-[#111624] border border-slate-200/80 dark:border-[#242F48] space-y-1.5">
+                    <div className="font-extrabold text-[#1860FC] dark:text-[#D4F907] flex items-center gap-1.5">
                       <Monitor className="w-4 h-4" />
                       <span>No Computador (Chrome / Edge):</span>
                     </div>
@@ -211,9 +216,9 @@ export const OfflineIndicator: React.FC = () => {
   return (
     <div
       role="status"
-      className="fixed bottom-16 md:bottom-4 left-4 z-50 flex items-center gap-2 rounded-full bg-amber-500 px-3.5 py-1.5 text-xs font-extrabold text-[#0A0E17] shadow-lg"
+      className="fixed bottom-16 md:bottom-4 left-4 z-50 flex items-center gap-2 rounded-full bg-amber-500 px-3.5 py-1.5 text-xs font-extrabold text-[#000000] shadow-lg"
     >
-      <span className="h-2 w-2 rounded-full bg-[#0A0E17] animate-pulse" />
+      <span className="h-2 w-2 rounded-full bg-[#000000] animate-pulse" />
       <span>Modo Offline — Usando dados salvos no dispositivo</span>
     </div>
   );

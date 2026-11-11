@@ -54,8 +54,9 @@ function evaluateTransactionCreate(
     'createdAt',
     'updatedAt',
   ];
+  const allowedKeys = [...requiredKeys, 'status', 'isRecurring'];
   const keys = Object.keys(payload);
-  if (keys.length !== requiredKeys.length || !requiredKeys.every((k) => keys.includes(k))) {
+  if (!requiredKeys.every((k) => keys.includes(k)) || !keys.every((k) => allowedKeys.includes(k))) {
     return 'PERMISSION_DENIED';
   }
   if (payload.uid !== auth.uid || payload.uid !== pathUserId) return 'PERMISSION_DENIED';
@@ -84,6 +85,12 @@ function evaluateTransactionCreate(
   }
   if (typeof payload.isStandardTemplate !== 'boolean') return 'PERMISSION_DENIED';
   if (typeof payload.notes !== 'string' || payload.notes.length > 240) return 'PERMISSION_DENIED';
+  if ('status' in payload && payload.status !== undefined) {
+    if (payload.status !== 'completed' && payload.status !== 'pending') return 'PERMISSION_DENIED';
+  }
+  if ('isRecurring' in payload && payload.isRecurring !== undefined) {
+    if (typeof payload.isRecurring !== 'boolean') return 'PERMISSION_DENIED';
+  }
   if (payload.createdAt !== nowIso || payload.updatedAt !== nowIso) return 'PERMISSION_DENIED';
 
   return 'ALLOW';

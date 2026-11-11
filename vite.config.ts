@@ -18,7 +18,9 @@ export default defineConfig(() => {
           'apple-touch-icon.png',
           'icon.svg',
           'logo-sobramais.png',
+          'logo-sobramais-dark.png',
           'logo-icon.png',
+          'logo-icon-dark.png',
         ],
         manifest: {
           id: '/',
@@ -26,8 +28,8 @@ export default defineConfig(() => {
           short_name: 'SobraMais',
           description:
             'Plataforma de gestão de entradas, saídas, gastos padrões, categorias personalizadas e planejamento inteligente de sobras mensais.',
-          theme_color: '#1456FF',
-          background_color: '#F4F6FB',
+          theme_color: '#26ADE4',
+          background_color: '#000000',
           display: 'standalone',
           start_url: '/',
           scope: '/',
@@ -87,8 +89,7 @@ export default defineConfig(() => {
           ],
         },
         devOptions: {
-          enabled: true,
-          type: 'module',
+          enabled: false,
         },
       }),
     ],

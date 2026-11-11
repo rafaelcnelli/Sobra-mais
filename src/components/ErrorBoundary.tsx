@@ -32,9 +32,9 @@ export class ErrorBoundary extends React.Component<
       }
 
       return (
-        <div className="min-h-screen bg-[#F4F6FB] dark:bg-[#080B12] flex items-center justify-center p-6">
+        <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#000000] flex items-center justify-center p-6">
           <div className="max-w-lg w-full bg-white dark:bg-[#111624] border border-slate-200 dark:border-[#1E273C] rounded-3xl p-6">
-            <div className="flex items-center gap-3 text-red-600 dark:text-red-400 mb-3">
+            <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400 mb-3">
               <AlertTriangle className="w-5 h-5 shrink-0" />
               <h2 className="text-lg font-bold font-display">Falha na Operação de Dados</h2>
             </div>
@@ -46,7 +46,7 @@ export class ErrorBoundary extends React.Component<
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-[#1456FF] rounded-full hover:bg-[#0D44D9] transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-[#1860FC] rounded-full hover:bg-[#0D48D9] transition-colors"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               Recarregar Aplicativo
