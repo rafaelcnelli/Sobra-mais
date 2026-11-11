@@ -43,9 +43,9 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ variant = 'n
           type="button"
           onClick={handleClick}
           title="Instalar aplicativo SobraMais no dispositivo"
-          className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-extrabold rounded-full bg-[#D4F907] text-[#000000] hover:bg-[#C0E206] transition-colors whitespace-nowrap shadow-xs cursor-pointer"
+          className="inline-flex items-center justify-center gap-1 px-2.5 sm:px-3 py-1.5 text-xs font-extrabold rounded-full bg-[#D4F907] text-[#000000] hover:bg-[#C0E206] transition-colors whitespace-nowrap shadow-xs cursor-pointer"
         >
-          <Download className="w-4 h-4 shrink-0" />
+          <Download className="w-3.5 h-3.5 shrink-0" />
           <span className="hidden sm:inline">Instalar App</span>
           <span className="sm:hidden">App</span>
         </button>

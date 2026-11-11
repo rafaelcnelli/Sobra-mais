@@ -23,6 +23,7 @@ import {
 } from 'firebase/firestore';
 import {
   Plus,
+  LogIn,
   LogOut,
   CheckCircle2,
   Sun,
@@ -859,27 +860,27 @@ export default function App() {
         {/* Workspace Content Area */}
         <div className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden">
           {/* Header Global: Marca + Busca em Tempo Real + Ações Rápidas */}
-          <header className="shrink-0 bg-white dark:bg-[#111624] border-b border-slate-200/80 dark:border-[#1E273C] px-4 sm:px-6 py-3 z-30 transition-colors">
-            <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 sm:gap-4">
+          <header className="shrink-0 bg-white dark:bg-[#111624] border-b border-slate-200/80 dark:border-[#1E273C] px-3 sm:px-6 py-2.5 z-30 transition-colors">
+            <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
               {/* Zone 1: Brand Logo (Mobile) / Active Page Indicator (Desktop) */}
-              <div className="flex items-center gap-2.5 shrink-0">
+              <div className="flex items-center gap-2 shrink-0">
                 <a
                   href="#visao-geral"
                   onClick={(e) => {
                     e.preventDefault();
                     setActiveTab('dashboard');
                   }}
-                  className="md:hidden flex items-center gap-2 shrink-0"
+                  className="md:hidden flex items-center gap-1.5 shrink-0"
                 >
                   <img
                     src="./logo-sobramais.png"
                     alt="SobraMais"
-                    className="h-7 w-auto object-contain dark:hidden"
+                    className="h-6 sm:h-7 w-auto object-contain dark:hidden"
                   />
                   <img
                     src="./logo-sobramais-dark.png"
                     alt="SobraMais"
-                    className="h-7 w-auto object-contain hidden dark:block"
+                    className="h-6 sm:h-7 w-auto object-contain hidden dark:block"
                   />
                 </a>
 
@@ -1022,8 +1023,8 @@ export default function App() {
                 )}
               </div>
 
-              {/* Zone 4: PWA Install, Privacy Mode Toggle, Theme Toggle & Global Quick-Add CTA */}
-              <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+              {/* Zone 4: PWA Install, Privacy Mode Toggle, Theme Toggle, Login & Deslogar (Sair) */}
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <PWAInstallButton variant="navbar" />
 
                 {/* 👁️ Botão Discreto de Modo Privacidade Global (Ocultar Valores R$) */}
@@ -1041,7 +1042,7 @@ export default function App() {
                       ? 'Mostrar valores monetários em Reais'
                       : 'Ocultar valores monetários em Reais'
                   }
-                  className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold rounded-full border transition-colors whitespace-nowrap cursor-pointer ${
+                  className={`inline-flex items-center justify-center gap-1.5 p-2 sm:px-3 sm:py-1.5 text-xs font-bold rounded-full border transition-colors whitespace-nowrap cursor-pointer ${
                     isPrivacyMode
                       ? 'bg-[#D4F907] text-[#000000] border-[#D4F907]'
                       : 'border-slate-200 dark:border-[#242F48] bg-[#F8FAFC] dark:bg-[#192034] text-[#000000] dark:text-white hover:border-[#1860FC] dark:hover:border-[#D4F907]'
@@ -1049,12 +1050,12 @@ export default function App() {
                 >
                   {isPrivacyMode ? (
                     <>
-                      <EyeOff className="w-4 h-4 shrink-0" />
+                      <EyeOff className="w-3.5 h-3.5 shrink-0" />
                       <span className="hidden xl:inline">R$ Oculto</span>
                     </>
                   ) : (
                     <>
-                      <Eye className="w-4 h-4 text-[#1860FC] dark:text-[#D4F907] shrink-0" />
+                      <Eye className="w-3.5 h-3.5 text-[#1860FC] dark:text-[#D4F907] shrink-0" />
                       <span className="hidden xl:inline">Privacidade</span>
                     </>
                   )}
@@ -1064,29 +1065,57 @@ export default function App() {
                   type="button"
                   onClick={toggleTheme}
                   aria-label={theme === 'dark' ? 'Ativar Modo Claro' : 'Ativar Modo Escuro'}
-                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold rounded-full border border-slate-200 dark:border-[#242F48] bg-[#F8FAFC] dark:bg-[#192034] text-[#000000] dark:text-white hover:border-[#1860FC] dark:hover:border-[#D4F907] transition-colors whitespace-nowrap cursor-pointer"
+                  className="inline-flex items-center justify-center gap-1.5 p-2 sm:px-3 sm:py-1.5 text-xs font-bold rounded-full border border-slate-200 dark:border-[#242F48] bg-[#F8FAFC] dark:bg-[#192034] text-[#000000] dark:text-white hover:border-[#1860FC] dark:hover:border-[#D4F907] transition-colors whitespace-nowrap cursor-pointer"
                 >
                   {theme === 'dark' ? (
                     <>
-                      <Sun className="w-4 h-4 text-[#D4F907]" />
+                      <Sun className="w-3.5 h-3.5 text-[#D4F907]" />
                       <span className="hidden lg:inline">Claro</span>
                     </>
                   ) : (
                     <>
-                      <Moon className="w-4 h-4 text-[#1860FC]" />
+                      <Moon className="w-3.5 h-3.5 text-[#1860FC]" />
                       <span className="hidden lg:inline">Escuro</span>
                     </>
                   )}
                 </button>
 
+                {/* Botão de Login na Navbar */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (currentUser) {
+                      setActiveTab('settings');
+                    } else {
+                      setIsGuestMode(false);
+                      try {
+                        sessionStorage.removeItem(GUEST_SESSION_KEY);
+                      } catch {
+                        // ignore
+                      }
+                    }
+                  }}
+                  title={
+                    currentUser
+                      ? `Conectado como ${currentUser.displayName || currentUser.email}`
+                      : 'Ir para a tela de Login / Entrar na conta'
+                  }
+                  className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-xs font-extrabold text-[#1860FC] dark:text-[#D4F907] bg-[#F8FAFC] dark:bg-[#192034] border border-[#1860FC]/30 dark:border-[#D4F907]/40 rounded-full hover:bg-[#1860FC] hover:text-white dark:hover:bg-[#D4F907] dark:hover:text-[#000000] transition-colors whitespace-nowrap cursor-pointer"
+                >
+                  <LogIn className="w-3.5 h-3.5 shrink-0" />
+                  <span>{currentUser ? (currentUser.displayName?.split(' ')[0] || 'Conta') : 'Login'}</span>
+                </button>
+
+                {/* Botão de Deslogar (Sair) na Navbar */}
                 <button
                   type="button"
                   onClick={handleSignOut}
-                  title="Encerrar sessão e voltar ao login"
-                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-[#F8FAFC] dark:bg-[#192034] border border-slate-200 dark:border-[#242F48] rounded-full hover:border-rose-500 hover:text-rose-600 dark:hover:text-rose-400 transition-colors whitespace-nowrap cursor-pointer"
+                  title="Deslogar e encerrar sessão"
+                  aria-label="Deslogar e sair da conta"
+                  className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-[#F8FAFC] dark:bg-[#192034] border border-slate-200 dark:border-[#242F48] rounded-full hover:border-rose-500 hover:text-rose-600 dark:hover:text-rose-400 transition-colors whitespace-nowrap cursor-pointer"
                 >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span className="hidden lg:inline">Sair</span>
+                  <LogOut className="w-3.5 h-3.5 shrink-0" />
+                  <span>Sair</span>
                 </button>
 
                 <button

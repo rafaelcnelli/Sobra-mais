@@ -4,13 +4,13 @@ import {
   SlidersHorizontal,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   X,
   Search,
   Filter,
   RotateCcw,
   Check,
-  ArrowDownLeft,
-  ArrowUpRight,
 } from 'lucide-react';
 import {
   formatBrlCents,
@@ -100,6 +100,26 @@ export function PageFilterBar({
     setLocalEndDate('');
   };
 
+  // Current month index for < NOV > arrow navigation
+  const defaultNovIdx = Math.max(
+    0,
+    AVAILABLE_MONTHS.findIndex((m) => m.key === '2026-11')
+  );
+  const foundMonthIdx = AVAILABLE_MONTHS.findIndex((m) => m.key === criteria.monthKey);
+  const activeMonthIdx = foundMonthIdx >= 0 ? foundMonthIdx : defaultNovIdx;
+  const activeMonthObj = AVAILABLE_MONTHS[activeMonthIdx] ?? AVAILABLE_MONTHS[defaultNovIdx];
+  const activeMonthShortCode = activeMonthObj.shortLabel.split('/')[0].toUpperCase();
+
+  const handlePrevMonth = () => {
+    const prevIdx = (activeMonthIdx - 1 + AVAILABLE_MONTHS.length) % AVAILABLE_MONTHS.length;
+    handleSelectMonth(AVAILABLE_MONTHS[prevIdx].key);
+  };
+
+  const handleNextMonth = () => {
+    const nextIdx = (activeMonthIdx + 1) % AVAILABLE_MONTHS.length;
+    handleSelectMonth(AVAILABLE_MONTHS[nextIdx].key);
+  };
+
   const handleApplyCustomFilter = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const minCents = parseInputToCents(localMinVal);
@@ -178,47 +198,116 @@ export function PageFilterBar({
       className="bg-white dark:bg-[#111624] border border-slate-200/80 dark:border-[#1E273C] rounded-2xl p-3.5 sm:p-4 mb-5 shadow-xs transition-all"
     >
       {/* Top Main Bar: Current Period, Month Shortcuts & Custom Filter Trigger */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* Left: Active period context & quick month tabs */}
-        <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#F8FAFC] dark:bg-[#111624] border border-slate-200/80 dark:border-[#242F48] shrink-0">
-            <Calendar className="w-3.5 h-3.5 text-[#1860FC] dark:text-[#D4F907]" />
-            <span className="text-xs font-bold text-[#000000] dark:text-white">
-              {activePeriodText}
-            </span>
-          </div>
+      <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
+        {/* Left: Active period context & quick month navigation (No Horizontal Scrollbar) */}
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
+          {/* MOBILE: Mês Atual como primeiro elemento com setas < NOV > sem rolamento */}
+          <div className="flex sm:hidden items-center gap-1.5">
+            <div className="inline-flex items-center gap-1 p-1 bg-[#F8FAFC] dark:bg-[#181F32] border border-slate-200/80 dark:border-[#242F48] rounded-xl">
+              <button
+                type="button"
+                onClick={handlePrevMonth}
+                aria-label="Mês anterior"
+                title="Mês anterior"
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-[#111624] hover:text-[#1860FC] dark:hover:text-[#D4F907] active:scale-95 transition-all cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+              </button>
 
-          {/* Quick Month Selectors */}
-          <div className="flex items-center gap-1.5 p-1 bg-[#F8FAFC] dark:bg-[#181F32] rounded-xl overflow-x-auto max-w-full">
-            {AVAILABLE_MONTHS.map((m) => {
-              const isSelected = criteria.periodMode === 'month' && criteria.monthKey === m.key;
-              return (
-                <button
-                  key={m.key}
-                  type="button"
-                  onClick={() => handleSelectMonth(m.key)}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                    isSelected
-                      ? 'bg-[#1860FC] text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white'
-                  }`}
-                >
-                  <span className="sm:hidden">{m.shortLabel}</span>
-                  <span className="hidden sm:inline">{m.label}</span>
-                </button>
-              );
-            })}
+              <button
+                type="button"
+                onClick={() => handleSelectMonth(activeMonthObj.key)}
+                title={`Mês selecionado: ${activeMonthObj.label}`}
+                className={`px-3 py-1 min-w-[56px] text-center text-xs font-extrabold uppercase tracking-wider rounded-lg transition-colors cursor-pointer ${
+                  criteria.periodMode === 'month' && criteria.monthKey !== 'all'
+                    ? 'bg-[#1860FC] text-white shadow-xs'
+                    : 'text-slate-700 dark:text-slate-300'
+                }`}
+              >
+                {activeMonthShortCode}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleNextMonth}
+                aria-label="Próximo mês"
+                title="Próximo mês"
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-[#111624] hover:text-[#1860FC] dark:hover:text-[#D4F907] active:scale-95 transition-all cursor-pointer"
+              >
+                <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+              </button>
+            </div>
+
             <button
               type="button"
               onClick={handleSelectAllMonths}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`px-3 py-2 text-xs font-bold rounded-xl border transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 criteria.periodMode === 'month' && criteria.monthKey === 'all'
-                  ? 'bg-[#1860FC] text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white'
+                  ? 'bg-[#1860FC] text-white border-[#1860FC] shadow-xs'
+                  : 'bg-[#F8FAFC] dark:bg-[#181F32] border-slate-200/80 dark:border-[#242F48] text-slate-600 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white'
               }`}
             >
               Todos
             </button>
+          </div>
+
+          {/* DESKTOP: Seletor de meses com setas < > e botões diretos sem barra de rolagem */}
+          <div className="hidden sm:flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#F8FAFC] dark:bg-[#111624] border border-slate-200/80 dark:border-[#242F48] shrink-0">
+              <button
+                type="button"
+                onClick={handlePrevMonth}
+                aria-label="Mês anterior"
+                title="Mês anterior"
+                className="p-0.5 rounded-md text-slate-500 hover:text-[#1860FC] dark:hover:text-[#D4F907] transition-colors cursor-pointer"
+              >
+                <ChevronLeft className="w-3.5 h-3.5 stroke-[2.5]" />
+              </button>
+              <Calendar className="w-3.5 h-3.5 text-[#1860FC] dark:text-[#D4F907] mx-0.5" />
+              <span className="text-xs font-bold text-[#000000] dark:text-white">
+                {activePeriodText}
+              </span>
+              <button
+                type="button"
+                onClick={handleNextMonth}
+                aria-label="Próximo mês"
+                title="Próximo mês"
+                className="p-0.5 rounded-md text-slate-500 hover:text-[#1860FC] dark:hover:text-[#D4F907] transition-colors cursor-pointer"
+              >
+                <ChevronRight className="w-3.5 h-3.5 stroke-[2.5]" />
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1 p-1 bg-[#F8FAFC] dark:bg-[#181F32] rounded-xl">
+              {AVAILABLE_MONTHS.map((m) => {
+                const isSelected = criteria.periodMode === 'month' && criteria.monthKey === m.key;
+                return (
+                  <button
+                    key={m.key}
+                    type="button"
+                    onClick={() => handleSelectMonth(m.key)}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#1860FC] text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white'
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={handleSelectAllMonths}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                  criteria.periodMode === 'month' && criteria.monthKey === 'all'
+                    ? 'bg-[#1860FC] text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-[#000000] dark:hover:text-white'
+                }`}
+              >
+                Todos
+              </button>
+            </div>
           </div>
         </div>
 
