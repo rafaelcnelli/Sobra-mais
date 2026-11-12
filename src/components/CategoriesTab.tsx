@@ -20,25 +20,47 @@ import {
   Brain,
   Eye,
   EyeOff,
+  Download,
+  Upload,
+  HardDrive,
+  FileJson,
+  Clock,
+  ShieldAlert,
+  FileCheck2,
 } from 'lucide-react';
 import {
   formatBrlCents,
   parseInputToCents,
   validateCategoryInput,
   type FinancialCategory,
+  type FinancialTransaction,
+  type MonthlySurplusPlan,
   type TransactionType,
   type ExpenseNature,
 } from '../utils/financeLogic';
 import { NATURE_LABELS } from '../utils/seedData';
 import type { ThemeMode } from '../App';
 import { PWAInstallButton } from './PWAInstallButton';
+import {
+  getBackupStatus,
+  setBackupFrequencyDays,
+  setAutoBackupEnabled,
+  formatBackupDate,
+  validateAndParseBackupJson,
+  BACKUP_FREQUENCY_PRESETS,
+  type SobraMaisBackupData,
+} from '../utils/backupManager';
 
 interface CategoriesTabProps {
   categories: FinancialCategory[];
+  transactions: FinancialTransaction[];
+  monthlyPlans: Record<string, MonthlySurplusPlan>;
   onCreateCategory: (catData: Omit<FinancialCategory, 'id' | 'uid'>) => Promise<void>;
   onUpdateCategory: (category: FinancialCategory) => Promise<void>;
   onDeleteCategory: (id: string) => Promise<void>;
   onQuickLaunchPreset: (category: FinancialCategory) => Promise<void>;
+  onDownloadBackup: () => void;
+  onRestoreBackup: (backup: SobraMaisBackupData) => void;
   theme: ThemeMode;
   onToggleTheme: () => void;
   currentUser: User | null;
@@ -53,10 +75,14 @@ const CAT_PAGE_SIZE = 7;
 
 export function CategoriesTab({
   categories,
+  transactions,
+  monthlyPlans,
   onCreateCategory,
   onUpdateCategory,
   onDeleteCategory,
   onQuickLaunchPreset,
+  onDownloadBackup,
+  onRestoreBackup,
   theme,
   onToggleTheme,
   currentUser,
@@ -79,6 +105,73 @@ export function CategoriesTab({
     'all' | 'fixed' | 'variable' | 'income_extra' | 'income_recurring'
   >('all');
   const [page, setPage] = useState(1);
+
+  // Backup & Restore state
+  const [backupStatus, setBackupStatus] = useState(() => getBackupStatus());
+  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
+  const [candidateFile, setCandidateFile] = useState<File | null>(null);
+  const [parsedBackup, setParsedBackup] = useState<SobraMaisBackupData | null>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [backupSuccessToast, setBackupSuccessToast] = useState<string | null>(null);
+
+  const refreshBackupStatus = () => {
+    setBackupStatus(getBackupStatus());
+  };
+
+  const handleFrequencyChange = (days: number) => {
+    setBackupFrequencyDays(days);
+    refreshBackupStatus();
+  };
+
+  const handleToggleAutoBackup = (enabled: boolean) => {
+    setAutoBackupEnabled(enabled);
+    refreshBackupStatus();
+  };
+
+  const handleTriggerDownload = () => {
+    onDownloadBackup();
+    refreshBackupStatus();
+    setBackupSuccessToast('Arquivo de backup JSON gerado e salvo com sucesso!');
+    setTimeout(() => setBackupSuccessToast(null), 4000);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setRestoreError(null);
+    setParsedBackup(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setCandidateFile(file);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result;
+      if (typeof content !== 'string') {
+        setRestoreError('Não foi possível ler o arquivo selecionado.');
+        return;
+      }
+
+      const result = validateAndParseBackupJson(content);
+      if (!result.valid || !result.data) {
+        setRestoreError(result.error || 'Arquivo de backup inválido.');
+      } else {
+        setParsedBackup(result.data);
+      }
+    };
+    reader.onerror = () => {
+      setRestoreError('Erro ao abrir o arquivo no navegador.');
+    };
+    reader.readAsText(file);
+  };
+
+  const handleConfirmRestore = () => {
+    if (!parsedBackup) return;
+    onRestoreBackup(parsedBackup);
+    setIsRestoreModalOpen(false);
+    setCandidateFile(null);
+    setParsedBackup(null);
+    setRestoreError(null);
+    refreshBackupStatus();
+  };
 
   useEffect(() => {
     setPage(1);
@@ -832,6 +925,283 @@ export function CategoriesTab({
           </div>
         </div>
       </section>
+
+      {/* =====================================================================
+          SEÇÃO 3: 🛡️ BACKUP & SEGURANÇA DE DADOS OFFLINE (JSON)
+      ===================================================================== */}
+      <section
+        aria-label="Backup Periódico e Segurança Offline em Formato JSON"
+        className="bg-white dark:bg-[#111624] border border-slate-200/80 dark:border-[#1E273C] rounded-3xl p-5 sm:p-6 space-y-4 shadow-xs"
+      >
+        <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-200/80 dark:border-[#1E273C] flex-wrap">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="w-8 h-8 rounded-xl bg-[#1860FC] text-[#D4F907] flex items-center justify-center shrink-0">
+              <HardDrive className="w-4 h-4" />
+            </span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-xs sm:text-sm font-extrabold font-display text-[#000000] dark:text-white truncate">
+                  3. 🛡️ Backup & Segurança de Dados Offline (JSON)
+                </h2>
+                {backupStatus.isReminderDue && (
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                    <ShieldAlert className="w-3 h-3" />
+                    Backup Recomendado
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                Rotina periódica de cópia de segurança em arquivo JSON legível para total controle dos seus dados
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleTriggerDownload}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-[#1860FC] rounded-full hover:bg-[#0D48D9] transition-colors cursor-pointer shadow-xs"
+            >
+              <Download className="w-3.5 h-3.5 text-[#D4F907]" />
+              <span>Baixar Backup (.json)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setRestoreError(null);
+                setCandidateFile(null);
+                setParsedBackup(null);
+                setIsRestoreModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-[#F8FAFC] dark:bg-[#181F32] border border-slate-200 dark:border-[#242F48] hover:border-[#1860FC] dark:hover:border-[#D4F907] rounded-full transition-colors cursor-pointer"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Restaurar (.json)</span>
+            </button>
+          </div>
+        </div>
+
+        {backupSuccessToast && (
+          <div className="flex items-center gap-2 p-2.5 text-xs text-[#000000] bg-[#D4F907] rounded-xl font-bold">
+            <FileCheck2 className="w-4 h-4 text-[#000000] shrink-0" />
+            <span>{backupSuccessToast}</span>
+          </div>
+        )}
+
+        {/* Grid de 3 Cards de Informação e Configuração do Backup */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-stretch">
+          {/* Card 1: Snapshot LocalStorage */}
+          <div className="p-3.5 rounded-2xl bg-[#F8FAFC] dark:bg-[#181F32] border border-slate-200/70 dark:border-[#1E273C] flex flex-col justify-between gap-2.5">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-extrabold text-[#000000] dark:text-white flex items-center gap-1.5">
+                  <HardDrive className="w-3.5 h-3.5 text-[#1860FC] dark:text-[#D4F907]" />
+                  Snapshot LocalStorage
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                  Automático & Ativo
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                Seus dados são salvos continuamente no armazenamento do navegador a cada lançamento ou ajuste.
+              </p>
+            </div>
+            <div className="pt-2 border-t border-slate-200 dark:border-[#242F48] flex items-center justify-between text-[11px]">
+              <span className="text-slate-500 dark:text-slate-400">Volume protegido:</span>
+              <strong className="text-[#000000] dark:text-white font-mono">
+                {transactions.length} txs · {categories.length} cats
+              </strong>
+            </div>
+          </div>
+
+          {/* Card 2: Último Download Realizado */}
+          <div className="p-3.5 rounded-2xl bg-[#F8FAFC] dark:bg-[#181F32] border border-slate-200/70 dark:border-[#1E273C] flex flex-col justify-between gap-2.5">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-extrabold text-[#000000] dark:text-white flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-[#1860FC] dark:text-[#D4F907]" />
+                  Último Download Baixado
+                </span>
+                {backupStatus.daysSinceLastDownload !== null && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#1860FC]/10 dark:bg-[#1860FC]/20 text-[#1860FC] dark:text-[#D4F907]">
+                    {backupStatus.daysSinceLastDownload === 0
+                      ? 'Hoje'
+                      : `${backupStatus.daysSinceLastDownload}d atrás`}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs font-bold text-[#000000] dark:text-white mt-1">
+                {formatBackupDate(backupStatus.lastDownloadIso)}
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                {backupStatus.lastDownloadIso
+                  ? 'Guarde o arquivo baixado em um local seguro ou na nuvem pessoal.'
+                  : 'Nenhum backup JSON baixado ainda neste dispositivo.'}
+              </p>
+            </div>
+            <div className="pt-2 border-t border-slate-200 dark:border-[#242F48] flex items-center justify-between text-[11px]">
+              <span className="text-slate-500 dark:text-slate-400">Status da rotina:</span>
+              <strong
+                className={`text-[11px] font-bold ${
+                  backupStatus.isReminderDue
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : 'text-emerald-600 dark:text-emerald-400'
+                }`}
+              >
+                {backupStatus.isReminderDue ? 'Download pendente' : 'Em dia'}
+              </strong>
+            </div>
+          </div>
+
+          {/* Card 3: Periodicidade & Lembrete */}
+          <div className="p-3.5 rounded-2xl bg-[#F8FAFC] dark:bg-[#181F32] border border-slate-200/70 dark:border-[#1E273C] flex flex-col justify-between gap-2.5">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-extrabold text-[#000000] dark:text-white flex items-center gap-1.5">
+                  <FileJson className="w-3.5 h-3.5 text-[#1860FC] dark:text-[#D4F907]" />
+                  Frequência da Rotina
+                </span>
+                <label className="flex items-center gap-1 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={backupStatus.autoBackupEnabled}
+                    onChange={(e) => handleToggleAutoBackup(e.target.checked)}
+                    className="w-3 h-3 rounded border-slate-300 text-[#1860FC] focus:ring-[#1860FC]"
+                  />
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400">Ativo</span>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-1 mt-2">
+                {BACKUP_FREQUENCY_PRESETS.map((preset) => (
+                  <button
+                    key={preset.days}
+                    type="button"
+                    onClick={() => handleFrequencyChange(preset.days)}
+                    className={`px-2 py-1 text-[10px] font-bold rounded-lg border transition-colors cursor-pointer truncate ${
+                      backupStatus.frequencyDays === preset.days
+                        ? 'bg-[#1860FC] text-white border-[#1860FC]'
+                        : 'bg-white dark:bg-[#111624] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-[#242F48] hover:border-[#1860FC]'
+                    }`}
+                  >
+                    {preset.days === 1
+                      ? 'Diário'
+                      : preset.days === 7
+                      ? 'Semanal'
+                      : preset.days === 15
+                      ? 'Quinzenal'
+                      : 'Mensal'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-200 dark:border-[#242F48] text-[11px] text-slate-500 dark:text-slate-400">
+              Lembrar a cada <strong>{backupStatus.frequencyDays} dias</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================================
+          MODAL DE RESTAURAÇÃO DE BACKUP JSON
+      ===================================================================== */}
+      {isRestoreModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+        >
+          <div className="bg-white dark:bg-[#111624] border border-slate-200 dark:border-[#1E273C] w-full max-w-md rounded-3xl p-5 sm:p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-200 dark:border-[#1E273C]">
+              <div className="flex items-center gap-2">
+                <span className="w-8 h-8 rounded-xl bg-[#1860FC] text-[#D4F907] flex items-center justify-center shrink-0">
+                  <Upload className="w-4 h-4" />
+                </span>
+                <div>
+                  <h3 className="text-xs sm:text-sm font-extrabold text-[#000000] dark:text-white">
+                    Restaurar Dados de Backup (.json)
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Importe um arquivo gerado previamente pelo SobraMais
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRestoreModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {restoreError && (
+              <div className="flex items-start gap-2 p-2.5 text-xs text-rose-800 dark:text-rose-200 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/60 rounded-xl">
+                <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                <span>{restoreError}</span>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Selecione o arquivo .json do backup:
+              </label>
+              <input
+                type="file"
+                accept=".json,application/json"
+                onChange={handleFileSelect}
+                className="w-full text-xs text-slate-600 dark:text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#1860FC] file:text-white hover:file:bg-[#0D48D9] file:cursor-pointer border border-dashed border-slate-300 dark:border-[#242F48] rounded-xl p-2.5 bg-[#F8FAFC] dark:bg-[#181F32]"
+              />
+            </div>
+
+            {parsedBackup && (
+              <div className="p-3.5 rounded-2xl bg-[#F8FAFC] dark:bg-[#181F32] border border-emerald-500/30 space-y-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  <FileCheck2 className="w-4 h-4 shrink-0" />
+                  <span>Arquivo válido e pronto para restauração!</span>
+                </div>
+                <div className="text-[11px] text-slate-600 dark:text-slate-300 space-y-1">
+                  <div>
+                    Arquivo: <strong className="text-[#000000] dark:text-white">{candidateFile?.name}</strong>
+                  </div>
+                  <div>
+                    Exportado em: <strong className="text-[#000000] dark:text-white">{formatBackupDate(parsedBackup.exportedAt)}</strong>
+                  </div>
+                  <div className="pt-1 border-t border-slate-200 dark:border-[#242F48] flex items-center justify-between font-mono text-[10px]">
+                    <span>{parsedBackup.stats.transactionsCount} transações</span>
+                    <span>{parsedBackup.stats.categoriesCount} categorias</span>
+                    <span>{parsedBackup.stats.monthlyPlansCount} metas mensais</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="p-3 rounded-xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 text-[11px] text-amber-700 dark:text-amber-300">
+              <strong>Atenção:</strong> A restauração substituirá os lançamentos e categorias locais atuais pelo conteúdo deste arquivo de backup.
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsRestoreModalOpen(false)}
+                className="px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 rounded-full cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={!parsedBackup}
+                onClick={handleConfirmRestore}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-[#1860FC] hover:bg-[#0D48D9] disabled:opacity-40 disabled:cursor-not-allowed rounded-full transition-colors cursor-pointer shadow-xs"
+              >
+                <Check className="w-3.5 h-3.5 text-[#D4F907]" />
+                <span>Confirmar Restauração</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

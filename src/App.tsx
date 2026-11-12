@@ -37,7 +37,17 @@ import {
   RotateCcw,
   Eye,
   EyeOff,
+  HardDrive,
+  Download,
+  FileJson,
 } from 'lucide-react';
+import {
+  saveAutoSnapshot,
+  triggerBackupDownload,
+  getBackupStatus,
+  dismissBackupReminder,
+  type SobraMaisBackupData,
+} from './utils/backupManager';
 import {
   auth,
   db,
@@ -301,6 +311,11 @@ export default function App() {
       }
     }
   }, [monthlyPlans, currentUser]);
+
+  // Snapshot automático contínuo para garantir segurança offline no LocalStorage
+  useEffect(() => {
+    saveAutoSnapshot(transactions, categories, monthlyPlans);
+  }, [transactions, categories, monthlyPlans]);
 
   // Firebase Auth listener
   useEffect(() => {
@@ -751,6 +766,60 @@ export default function App() {
     setActiveTab('transactions');
   }, []);
 
+  // Rotina de Backup Periódico Offline (JSON) & Status
+  const [backupStatusTick, setBackupStatusTick] = useState(0);
+  const [isBackupReminderDismissed, setIsBackupReminderDismissed] = useState(false);
+
+  const backupStatus = useMemo(() => {
+    return getBackupStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [backupStatusTick, transactions.length, categories.length]);
+
+  const handleDownloadBackup = useCallback(() => {
+    try {
+      const result = triggerBackupDownload(transactions, categories, monthlyPlans);
+      showToast(`Backup ${result.fileName} gerado com sucesso!`);
+      setBackupStatusTick((t) => t + 1);
+      setIsBackupReminderDismissed(true);
+    } catch {
+      showToast('Erro ao baixar arquivo de backup.');
+    }
+  }, [transactions, categories, monthlyPlans, showToast]);
+
+  const handleRestoreBackup = useCallback(
+    (backup: SobraMaisBackupData) => {
+      try {
+        setTransactions(backup.transactions);
+        setCategories(backup.categories);
+        if (backup.monthlyPlans && Object.keys(backup.monthlyPlans).length > 0) {
+          setMonthlyPlans(backup.monthlyPlans);
+        }
+        try {
+          localStorage.setItem(LOCAL_TX_KEY, JSON.stringify(backup.transactions));
+          localStorage.setItem(LOCAL_CAT_KEY, JSON.stringify(backup.categories));
+          if (backup.monthlyPlans) {
+            localStorage.setItem(LOCAL_PLAN_KEY, JSON.stringify(backup.monthlyPlans));
+          }
+        } catch {
+          // ignore
+        }
+        saveAutoSnapshot(backup.transactions, backup.categories, backup.monthlyPlans || {});
+        setBackupStatusTick((t) => t + 1);
+        showToast(
+          `Backup restaurado com sucesso! (${backup.transactions.length} lançamentos e ${backup.categories.length} categorias)`
+        );
+      } catch {
+        showToast('Falha ao restaurar dados do backup.');
+      }
+    },
+    [showToast]
+  );
+
+  const handleDismissReminder = useCallback(() => {
+    dismissBackupReminder();
+    setIsBackupReminderDismissed(true);
+  }, []);
+
   const filteredTransactions = useMemo(() => {
     return filterTransactionsByCriteria(transactions, filterCriteria);
   }, [transactions, filterCriteria]);
@@ -1183,6 +1252,55 @@ export default function App() {
 
           {/* Main Workspace Container with generous mobile spacing and pb-28 so Bottom Bar never overlaps content */}
           <main className="flex-1 min-h-0 max-w-7xl w-full mx-auto px-4 sm:px-6 pt-4 sm:pt-5 pb-28 md:pb-8 overflow-y-auto overflow-x-hidden">
+            {/* Banner de Lembrete de Backup Periódico Offline */}
+            {!isBackupReminderDismissed &&
+              backupStatus.isReminderDue &&
+              backupStatus.autoBackupEnabled && (
+                <div
+                  role="alert"
+                  className="mb-4 p-3.5 sm:p-4 rounded-2xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs"
+                >
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <span className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 mt-0.5">
+                      <HardDrive className="w-4 h-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <strong className="text-xs font-extrabold text-[#000000] dark:text-white">
+                          Segurança Offline: Backup JSON Recomendado
+                        </strong>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300">
+                          {backupStatus.daysSinceLastDownload !== null
+                            ? `${backupStatus.daysSinceLastDownload} dias sem download`
+                            : 'Primeiro download pendente'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 leading-snug">
+                        Mantenha uma cópia de segurança em formato JSON legível no seu computador ou celular para proteger seus dados locais contra limpezas do navegador.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                    <button
+                      type="button"
+                      onClick={handleDownloadBackup}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-[#1860FC] hover:bg-[#0D48D9] rounded-full transition-colors cursor-pointer shadow-xs whitespace-nowrap"
+                    >
+                      <Download className="w-3.5 h-3.5 text-[#D4F907]" />
+                      <span>Baixar Agora (.json)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDismissReminder}
+                      className="px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white rounded-full transition-colors cursor-pointer whitespace-nowrap"
+                    >
+                      Lembrar mais tarde
+                    </button>
+                  </div>
+                </div>
+              )}
+
             {/* In-Page Filter Bar: Standard Months, All-Time & Custom Date/Nature/Category Filter */}
             <PageFilterBar
               criteria={filterCriteria}
@@ -1281,10 +1399,14 @@ export default function App() {
             {activeTab === 'settings' && (
               <CategoriesTab
                 categories={categories}
+                transactions={transactions}
+                monthlyPlans={monthlyPlans}
                 onCreateCategory={handleCreateCategory}
                 onUpdateCategory={handleUpdateCategory}
                 onDeleteCategory={handleDeleteCategory}
                 onQuickLaunchPreset={handleQuickLaunchPreset}
+                onDownloadBackup={handleDownloadBackup}
+                onRestoreBackup={handleRestoreBackup}
                 theme={theme}
                 onToggleTheme={toggleTheme}
                 currentUser={currentUser}
